@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>드럼 연습실 예약 (테스트)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
+  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
+  --accent:#0e9194;--accent-text:#5fd4d6;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
+:root[data-theme="dark"]{
+  --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
+  --accent:#0e9194;--accent-text:#5fd4d6;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 160px}
+h1{font-size:26px;font-weight:900;letter-spacing:-.02em;margin:8px 0 2px}
+h2{font-size:18px;font-weight:700;margin:20px 0 8px}
+.lead{color:var(--sub);margin:0 0 12px;font-size:14px}
+.banner{background:var(--brass-bg);color:var(--ink);border-left:4px solid var(--brass);padding:10px 12px;border-radius:6px;font-size:14px;margin:10px 0}
+.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin:10px 0;font-size:13px;color:var(--sub)}
+.debug input{font:inherit;margin-top:4px;width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
+.debug button{margin-top:6px}
+.tabs{display:flex;gap:8px;margin:12px 0}
+.tab{flex:1;min-height:52px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
+.tab small{display:block;font-weight:400;color:var(--sub);font-size:12px}
+.tab[aria-selected="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.tab[aria-selected="true"] small{color:inherit;opacity:.8}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:400px){.grid{grid-template-columns:repeat(3,1fr)}}
+.slot{min-height:64px;border:1.5px solid var(--line);border-radius:10px;background:var(--free);color:var(--ink);font:inherit;text-align:left;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.slot b{font-size:15px}
+.slot span{font-size:13px}
+.slot.free{border-color:var(--accent)}
+.slot.free span{color:var(--accent-text);font-weight:700}
+.slot.taken{background:var(--taken);cursor:not-allowed}
+.slot.taken.stu span{color:var(--accent-text);font-weight:700}
+.slot.taken.ext span{color:var(--ext-text);font-weight:700}
+.lg{display:inline-flex;align-items:center;gap:5px;font-weight:700}
+.lg.stu{color:var(--accent-text)}
+.lg.ext{color:var(--ext-text)}
+.slot.past{background:var(--past);color:var(--sub);cursor:not-allowed}
+.slot.blocked{background:repeating-linear-gradient(135deg,var(--past),var(--past) 6px,var(--taken) 6px,var(--taken) 12px);cursor:not-allowed}
+.badge{display:inline-block;background:var(--brass-bg);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:0 7px;font-weight:700;margin-left:4px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin:10px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+label{display:block;font-weight:700;font-size:14px;margin:16px 0 8px}
+input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date]{width:100%;font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hint{font-size:13px;color:var(--sub);margin:4px 0 0}
+.hint.warn{color:var(--brass);font-weight:500}
+.btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.small{min-height:40px;width:auto;padding:0 14px;margin:0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.msg{padding:10px 12px;border-radius:8px;margin:10px 0;font-size:14px}
+.msg.err{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:13px;font-weight:400}
+.check input{width:22px;height:22px;margin:0;flex:none}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav.bottom button{flex:1;min-height:56px;border:0;background:none;color:var(--sub);font:inherit;font-weight:500;cursor:pointer}
+nav.bottom button[aria-current="page"]{color:var(--accent-text);font-weight:700;box-shadow:inset 0 3px 0 var(--accent)}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-bg.open{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow:auto;animation:up .18s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.sheet{animation:none}}
+.item{border-top:1px solid var(--line);padding:12px 0}
+.item:first-child{border-top:0}
+.status-cancel{color:var(--danger);font-weight:700}
+.tbl{overflow-x:auto}
+.rules ul{padding-left:20px;margin:8px 0 0}
+.rules{margin-top:36px}
+.cols{display:grid;gap:8px;align-items:end}
+.cols.c2{grid-template-columns:1fr 1fr}
+.cols.c3{grid-template-columns:1.5fr 1fr 1fr}
+.cols>div{min-width:0}
+.cols label{font-size:13px}
+.req{color:var(--danger);font-weight:900}
+.cols input,.cols select{min-width:0;min-height:44px;padding:8px;font-size:14px}
+.rules li{margin:9px 0;font-size:14px;line-height:1.7}
+#aTabs .tab{font-size:14px;padding:0 4px}
+select{flex:1;min-width:0;min-height:48px;font:inherit;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.part{font-weight:700;font-size:15px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+.part small{font-weight:400;color:var(--sub);font-size:13px;margin-left:6px}
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:12px 10px 16px;min-height:200px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.tile b{font-size:17px;line-height:1.3}
+.tile small{font-size:12px;color:var(--sub);line-height:1.4}
+.tile.main{border:2px solid var(--accent)}
+.tile.soon{border-style:dashed}
+.tile .logo{display:flex;align-items:center;justify-content:center;width:100%;height:128px;background:#fff;border:1px solid var(--line);border-radius:10px}
+.tile .logo img{width:64px;height:auto;display:block}
+.tile .logo svg{width:92px;height:92px}
+.slot.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.slot.sel span{color:inherit}
+.actbar{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -4px 12px rgba(0,0,0,.08);z-index:4}
+.actin{max-width:560px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.actin #actTxt{font-size:14px;line-height:1.4}
+.actin .btn{width:auto;min-width:120px;margin:0;padding:0 20px}
+.sheet.done{position:relative;overflow:hidden;text-align:center}
+.ck{display:block;width:84px;height:84px;margin:4px auto 0}
+.ck circle{fill:none;stroke:var(--accent);stroke-width:5;stroke-dasharray:227;stroke-dashoffset:227;animation:ckd .35s ease-out forwards}
+.ck path{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:52;stroke-dashoffset:52;animation:ckd .25s .3s ease-out forwards}
+@keyframes ckd{to{stroke-dashoffset:0}}
+.sheet.done h2{animation:pop .3s .4s both}
+.sheet.done .card,.sheet.done .hint,.sheet.done #ok{animation:pop .3s .5s both}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.conf{position:absolute;top:64px;left:50%;width:8px;height:12px;border-radius:2px;opacity:0;animation:fall .9s ease-out forwards}
+@keyframes fall{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+@media(prefers-reduced-motion:reduce){.sheet.done *{animation:none!important;opacity:1}.ck circle,.ck path{stroke-dashoffset:0}.conf{display:none}}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>드럼 연습실 예약</h1>
+  <p class="lead">오늘과 내일, 1시간 단위로 예약할 수 있습니다. 예약은 즉시 확정됩니다.</p>
+  <div class="banner" id="notice">테스트 화면입니다. 새로고침하면 예약이 초기화됩니다. 실제 서버와 연결되어 있지 않습니다.</div>
+
+  <details class="debug">
+    <summary>테스트용 시각 조정 (서울 기준)</summary>
+    <input type="datetime-local" id="fakeNow">
+    <button class="btn ghost small" id="applyNow">이 시각으로 설정</button>
+    <button class="btn ghost small" id="resetNow">실제 시각으로</button>
+    <p class="hint" id="nowLabel"></p>
+    <p class="hint">샘플 이용권: 김이용 / 0000 · 관리자 비밀번호: 0000 (테스트 전용, 새로고침하면 초기화)</p>
+  </details>
+
+  <section id="v-book">
+    <div class="tabs" id="dayTabs" role="tablist"></div>
+    <div class="legend"><span>예약 가능</span><span class="lg stu">원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div>
+    <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
+    <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (이용권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
+  </section>
+
+  <section id="v-mine" class="hidden">
+    <h2>내 예약 확인</h2>
+    <div class="card">
+      <label for="mName">이름</label>
+      <input type="text" id="mName" autocomplete="off" placeholder="예약할 때 입력한 이름">
+      <label for="mPw">비밀번호 4자리</label>
+      <input type="password" id="mPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">
+      <button class="btn" id="mFind">예약 확인</button>
+    </div>
+    <div id="mOut"></div>
+    <button class="btn ghost" id="toAdmin" style="margin-top:32px">관리자 페이지</button>
+  </section>
+
+  <section id="v-admin" class="hidden">
+    <h2>관리자</h2>
+    <div id="adminLogin" class="card">
+      <label for="aPw">관리자 비밀번호</label>
+      <input type="password" id="aPw" autocomplete="off">
+      <button class="btn" id="aGo">로그인</button>
+      <div id="aMsg"></div>
+    </div>
+    <div id="adminPane" class="hidden"></div>
+  </section>
+</div>
+
+<div id="actBar" class="actbar hidden"><div class="actin"><div id="actTxt"></div><button class="btn" id="actGo">예약하기</button></div></div>
+
+<nav class="bottom">
+  <button data-go="book" aria-current="page">예약하기</button>
+  <button data-go="mine">내 예약</button>
+</nav>
+
+<div class="sheet-bg" id="bg"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+"use strict";
+/* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
+const DAYS_KO=["일","월","화","수","목","금","토"];
+let fakeNow=null;
+function nowSeoul(){
+  const d=fakeNow?new Date(fakeNow):new Date();
+  if(fakeNow){return fakeNow}
+  const p=new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(d);
+  return p.replace(" ","T");
+}
+function seoulDate(){return nowSeoul().slice(0,10)}
+function addDays(ds,n){const [y,m,d]=ds.split("-").map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.toISOString().slice(0,10)}
+function slotStart(date,hour){return date+"T"+String(hour).padStart(2,"0")+":00:00"}
+function started(date,hour){return slotStart(date,hour)<=nowSeoul()}
+function slotEnd(date,hour){return hour===23?addDays(date,1)+"T00:00:00":slotStart(date,hour+1)}
+function ended(date,hour){return slotEnd(date,hour)<=nowSeoul()}
+function allowedDates(){const t=seoulDate();return [t,addDays(t,1)]}
+function norm(n){return n.replace(/\s+/g,"")}
+function mask(n){const c=[...n];if(c.length<=1)return n;if(c.length===2)return c[0]+"*";return c[0]+"*".repeat(c.length-2)+c[c.length-1]}
+function validName(n){return /^[가-힣]{2,5}$/.test(n)||/^[A-Za-z]{2,20}$/.test(n)}
+function dateLabel(ds){const [y,m,d]=ds.split("-").map(Number);return m+"월 "+d+"일 ("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"}
+function hourLabel(h){return String(h).padStart(2,"0")+":00–"+String(h+1).padStart(2,"0")+":00"}
+
+const db={
+  nextId:1,
+  reservations:[],
+  passes:[{name:"김이용",pw:"0000",start:"2000-01-01",end:"2099-12-31",limit:3}],
+  blocked:[], // {date,hour,reason}
+  externals:[{name:"김외부",pw:"0000",phone:"010-0000-0000"}],
+  admin:"0000",
+  fails:{},
+  log:[]
+};
+function seed(){
+  const t=seoulDate(),tm=addDays(t,1);
+  [[t,20,"홍길동","1111"],[t,21,"이서연","2222"],[tm,10,"김이용","0000"],[tm,11,"남궁민수","3333"]]
+  .forEach(([d,h,n,p])=>db.reservations.push({id:db.nextId++,date:d,hour:h,name:n,pw:p,status:"확정",pass:n==="김이용",reason:""}));
+  db.blocked.push({date:tm,hour:3,reason:"점검"});
+  db.passes[0].start=t;db.passes[0].end=addMonthsEnd(t,1);
+}
+function activePass(name,date){return db.passes.find(p=>norm(p.name)===norm(name)&&p.start<=date&&date<=p.end)}
+function publicStatus(date){ // 공개 응답: 마스킹 이름만 (원본 이름과 비밀번호는 포함하지 않음)
+  const out=[];
+  for(let h=0;h<24;h++){
+    const r=db.reservations.find(x=>x.date===date&&x.hour===h&&x.status==="확정");
+    const b=db.blocked.find(x=>x.date===date&&x.hour===h);
+    out.push({hour:h,past:ended(date,h),taken:!!r,masked:r?mask(r.name):null,pass:r?r.pass:false,ext:r?!!r.ext:false,blocked:!!b});
+  }
+  return out;
+}
+const PHONE="010-7753-8730";
+function findExt(name,pw){return db.externals.find(e=>norm(e.name)===norm(name)&&e.pw===pw)}
+function reserve(date,hour,name,pw,consent,mode){
+  name=name.trim();
+  if(!allowedDates().includes(date))return {ok:false,msg:"오늘과 내일만 예약할 수 있습니다."};
+  if(!consent)return {ok:false,msg:"개인정보 수집에 동의해 주십시오."};
+  if(!validName(name))return {ok:false,msg:"본명을 한글 2~5자 또는 영문으로 입력하십시오."};
+  if(!/^\d{4}$/.test(pw))return {ok:false,msg:"비밀번호는 숫자 4자리입니다."};
+  let ext=mode==="ext"||mode==="adminExt";
+  if(mode==="ext"){
+    const key="ext:"+norm(name),f=db.fails[key]||{n:0,until:""};
+    if(f.until&&f.until>nowSeoul())return {ok:false,msg:"시도 횟수를 초과했습니다. 15분 뒤에 다시 시도하십시오."};
+    if(!findExt(name,pw)){
+      f.n++;if(f.n>=5){f.until=addMin(nowSeoul(),15);f.n=0}
+      db.fails[key]=f;
+      return {ok:false,msg:"등록된 외부 이용자 정보와 일치하지 않습니다. 처음 이용하시는 경우 "+PHONE+"으로 연락하시기 바랍니다.",ext:true};
+    }
+    db.fails[key]={n:0,until:""};
+  }else if(mode==="auto"){ext=!!findExt(name,pw)}
+  if(ended(date,hour))return {ok:false,msg:"이미 지난 시간입니다. 다른 시간을 선택하십시오.",refresh:true};
+  if(db.blocked.some(b=>b.date===date&&b.hour===hour))return {ok:false,msg:"이용할 수 없는 시간입니다.",refresh:true};
+  if(db.reservations.some(r=>r.date===date&&r.hour===hour&&r.status==="확정"))return {ok:false,msg:"다른 분이 방금 예약한 시간입니다. 다른 시간을 선택하십시오.",refresh:true};
+  const ps=ext?null:activePass(name,date);
+  let isPass=false;
+  if(mode==="adminExt"||mode==="adminStudent"){
+    /* 관리자 예약: 하루 횟수 제한, 등록 여부, 이용권 비밀번호 확인 없이 예약 */
+    isPass=!ext&&!!ps;
+  }else if(ext){
+    /* 외부 이용자: 하루 예약 횟수 제한 없음 */
+  }else if(ps){
+    if(ps.pw!==pw)return {ok:false,msg:"이용권 비밀번호가 일치하지 않습니다."};
+    isPass=true;
+    if(ps.limit&&db.reservations.filter(r=>r.date===date&&norm(r.name)===norm(name)&&r.status==="확정").length>=ps.limit)return {ok:false,msg:"이용권 하루 이용 횟수("+ps.limit+"회)를 모두 사용했습니다."};
+  }else{
+    if(db.reservations.some(r=>r.date===date&&norm(r.name)===norm(name)&&r.status==="확정"))
+      return {ok:false,msg:"하루에 한 번만 예약할 수 있습니다. 해당 날짜에 이미 예약이 있습니다."};
+  }
+  const rec={id:db.nextId++,date,hour,name:norm(name),pw,status:"확정",pass:isPass,ext,reason:""};
+  db.reservations.push(rec);
+  db.log.push(nowSeoul()+" 예약 #"+rec.id);
+  return {ok:true,rec};
+}
+function lookup(name,pw){
+  const key=norm(name);
+  const f=db.fails[key]||{n:0,until:""};
+  if(f.until&&f.until>nowSeoul())return {ok:false,msg:"시도 횟수를 초과했습니다. 15분 뒤에 다시 시도하십시오."};
+  const list=db.reservations.filter(r=>norm(r.name)===key&&r.pw===pw);
+  const known=db.reservations.some(r=>norm(r.name)===key)||db.passes.some(p=>norm(p.name)===key&&p.pw===pw);
+  if(!list.length&&!known||(!list.length&&db.reservations.some(r=>norm(r.name)===key)&&!db.passes.some(p=>norm(p.name)===key&&p.pw===pw))){
+    f.n++;if(f.n>=5){f.until=addMin(nowSeoul(),15);f.n=0}
+    db.fails[key]=f;
+    return {ok:false,msg:"이름 또는 비밀번호가 일치하지 않거나 예약이 없습니다."};
+  }
+  db.fails[key]={n:0,until:""};
+  const ps=db.passes.find(p=>norm(p.name)===key&&p.pw===pw&&p.end>=seoulDate());
+  return {ok:true,list:list.sort((a,b)=>slotStart(a.date,a.hour).localeCompare(slotStart(b.date,b.hour))),pass:ps||null};
+}
+function addMin(iso,m){const d=new Date(iso+"Z");d.setUTCMinutes(d.getUTCMinutes()+m);return d.toISOString().slice(0,19)}
+function cancelOwn(id,name,pw){
+  const r=db.reservations.find(x=>x.id===id);
+  if(!r||norm(r.name)!==norm(name)||r.pw!==pw)return {ok:false,msg:"본인의 예약이 아닙니다."};
+  if(r.status!=="확정")return {ok:false,msg:"이미 취소된 예약입니다."};
+  if(started(r.date,r.hour))return {ok:false,msg:"시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오."};
+  r.status="취소";r.reason="본인 취소";db.log.push(nowSeoul()+" 본인취소 #"+id);return {ok:true};
+}
+
+function moveReservation(id,name,pw,nd,nh){
+  const r=db.reservations.find(x=>x.id===id);
+  if(!r||norm(r.name)!==norm(name)||r.pw!==pw)return {ok:false,msg:"본인의 예약이 아닙니다."};
+  if(r.status!=="확정")return {ok:false,msg:"취소된 예약은 변경할 수 없습니다."};
+  if(started(r.date,r.hour))return {ok:false,msg:"시작된 예약은 직접 변경할 수 없습니다. 학원에 문의하십시오."};
+  if(!allowedDates().includes(nd))return {ok:false,msg:"오늘과 내일만 선택할 수 있습니다."};
+  if(r.date===nd&&r.hour===nh)return {ok:false,msg:"현재 예약과 같은 시간입니다."};
+  if(ended(nd,nh))return {ok:false,msg:"이미 지난 시간입니다."};
+  if(db.blocked.some(b=>b.date===nd&&b.hour===nh))return {ok:false,msg:"이용할 수 없는 시간입니다."};
+  if(db.reservations.some(x=>x.id!==r.id&&x.date===nd&&x.hour===nh&&x.status==="확정"))return {ok:false,msg:"다른 분이 방금 예약한 시간입니다. 다른 시간을 선택하십시오."};
+  const others=db.reservations.filter(x=>x.id!==r.id&&x.date===nd&&norm(x.name)===norm(r.name)&&x.status==="확정").length;
+  if(r.pass){
+    const ps=activePass(r.name,nd);
+    if(!ps||ps.pw!==pw)return {ok:false,msg:"이용권 기간 밖의 날짜입니다."};
+    if(ps.limit&&others>=ps.limit)return {ok:false,msg:"이용권 하루 이용 횟수("+ps.limit+"회)를 초과합니다."};
+  }else if(!r.ext&&others>=1)return {ok:false,msg:"하루에 한 번만 예약할 수 있습니다. 해당 날짜에 이미 예약이 있습니다."};
+  const from=r.date+" "+r.hour;
+  r.date=nd;r.hour=nh;
+  db.log.push(nowSeoul()+" 시간변경 #"+r.id+" "+from+" -> "+nd+" "+nh);
+  return {ok:true};
+}
+function openMoveSheet(id,name,pw){
+  const r=db.reservations.find(x=>x.id===id);
+  if(!r)return;
+  let md=allowedDates().includes(r.date)?r.date:allowedDates()[0];
+  const draw=()=>{
+    const dates=allowedDates();
+    $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">시간 변경</h2><button class="btn ghost small" id="mx">닫기</button></div>'+
+      '<p class="hint">현재 예약: '+dateLabel(r.date)+' '+hourLabel(r.hour)+'<br>새 시간을 선택하면 기존 예약이 새 시간으로 이동됩니다.</p>'+
+      '<div class="tabs">'+dates.map((d,i)=>'<button class="tab" data-md="'+d+'" aria-selected="'+(d===md)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("")+'</div>'+
+      '<div id="mMsg"></div><div class="grid">'+publicStatus(md).map(s=>{
+        const cur=r.date===md&&r.hour===s.hour;
+        let cls="free",txt="선택",dis="";
+        if(cur){cls="taken";txt="현재 예약";dis="disabled"}
+        else if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
+        else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+        else if(s.past){cls="past";txt="";dis="disabled"}
+        return '<button class="slot '+cls+'" data-mh="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
+      }).join("")+'</div>';
+    $("#mx").onclick=closeSheet;
+    document.querySelectorAll("[data-md]").forEach(t=>t.onclick=()=>{md=t.dataset.md;draw()});
+    document.querySelectorAll("[data-mh]:not([disabled])").forEach(b=>b.onclick=()=>{
+      const h=+b.dataset.mh;
+      if(!confirm(dateLabel(md)+" "+hourLabel(h)+"(으)로 이동하시겠습니까?\n기존 예약은 삭제됩니다."))return;
+      const res=moveReservation(id,name,pw,md,h);
+      if(!res.ok){draw();$("#mMsg").innerHTML='<div class="msg err">'+esc(res.msg)+'</div>';return}
+      renderBook();$("#mFind").click();
+      $("#sheet").classList.add("done");$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>시간이 변경되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.name)+'</div><div>'+dateLabel(md)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(h)+'</div></div><button class="btn" id="ok">확인</button>';
+      burst();$("#ok").onclick=closeSheet;
+    });
+  };
+  draw();
+  $("#bg").classList.add("open");
+}
+/* ===== 화면 ===== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let curDate=null,adminOn=false;
+
+function go(v){
+  ["book","mine","admin"].forEach(k=>$("#v-"+k).classList.toggle("hidden",k!==v));
+  const navCur=v;
+  document.querySelectorAll("nav.bottom button").forEach(b=>{if(b.dataset.go===navCur)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  if(v==="book"){curDate=null;renderBook()}
+  if(v==="admin"&&adminOn)renderAdmin();
+  if(v==="admin"&&!adminOn)setTimeout(()=>$("#aPw").focus(),0);
+  if(v==="mine")setTimeout(()=>$("#mName").focus(),0);
+  updateBar();
+}
+document.querySelectorAll("nav.bottom button").forEach(b=>b.onclick=()=>go(b.dataset.go));
+
+const LOGO_SRC="data:image/png;base64,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";
+let selHour=null,selDate=null;
+function selectSlot(h){if(selDate===curDate&&selHour===h){selHour=null}else{selDate=curDate;selHour=h}renderBook()}
+function updateBar(){
+  const bar=$("#actBar");
+  const onBook=!$("#v-book").classList.contains("hidden");
+  if(selHour!==null&&selDate&&!allowedDates().includes(selDate))selHour=null;
+  if(selHour!==null&&selDate===curDate&&!document.querySelector("#grid .slot.free.sel, #grid2 .slot.free.sel"))selHour=null;
+  if(!onBook||selHour===null){bar.classList.add("hidden");return}
+  $("#actTxt").innerHTML='<b>'+(selDate===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(selDate)+'</b><br>'+hourLabel(selHour);
+  bar.classList.remove("hidden");
+}
+function openChooser(){
+  if(selHour===null)return;
+  $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">예약 방식 선택</h2><button class="btn ghost small" id="cx">닫기</button></div>'+
+    '<div style="text-align:center;font-weight:900;font-size:26px;line-height:1.4;margin:18px 0 22px">'+(selDate===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(selDate)+'<br>'+hourLabel(selHour)+'</div>'+
+    '<div class="choose">'+
+    '<button class="tile main" id="goStudent"><span class="logo"><img src="'+LOGO_SRC+'" alt="현 music academy 로고"></span><b>현실용음악학원 재원생 예약하기</b></button>'+
+    '<button class="tile" id="goExternal"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#6b6880" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><b>외부 이용자 예약하기</b></button>'+
+    '</div><p class="hint" id="extMsg" role="status"></p>';
+  $("#bg").classList.add("open");
+  $("#cx").onclick=closeSheet;
+  $("#goStudent").onclick=()=>{curDate=selDate;openSheet(selHour,false)};
+  $("#goExternal").onclick=()=>{curDate=selDate;openSheet(selHour,false,"ext")};
+}
+function renderBook(){
+  const dates=allowedDates();
+  if(!dates.includes(curDate))curDate=dates[0];
+  $("#nowLabel").textContent="현재(서울): "+nowSeoul().replace("T"," ").slice(0,16);
+  $("#dayTabs").innerHTML=dates.map((d,i)=>'<button class="tab" role="tab" data-d="'+d+'" aria-selected="'+(d===curDate)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
+  document.querySelectorAll("#dayTabs .tab").forEach(t=>t.onclick=()=>{curDate=t.dataset.d;renderBook()});
+  const cells=publicStatus(curDate).map(s=>{
+    let cls="free",txt="예약 가능",dis="";
+    if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+    else if(s.past){cls="past";txt="";dis="disabled"}
+    return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
+  });
+  $("#grid").innerHTML=cells.slice(0,12).join("");$("#grid2").innerHTML=cells.slice(12).join("");
+  document.querySelectorAll("#grid .slot.free, #grid2 .slot.free").forEach(b=>{b.onclick=()=>selectSlot(+b.dataset.h);if(selDate===curDate&&+b.dataset.h===selHour){b.classList.add("sel");b.querySelector("span").textContent="선택됨"}});
+  updateBar();
+}
+
+function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
+  $("#sheet").innerHTML=
+   '<div class="row"><h2 style="margin:0">'+(EXT?"외부 이용자 · ":"")+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' '+hourLabel(h)+'</h2>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
+   (EXT?'<div class="banner">처음 이용하시는 경우 <b>'+PHONE+'</b>으로 연락하시기 바랍니다.<a class="btn" href="tel:01077538730" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px">전화 연결 '+PHONE+'</a></div>':'')+
+   (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
+   '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
+   (admin?'':'<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
+   '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
+   (admin?'':'<p class="hint">'+(EXT?'통화 시 등록하신 비밀번호 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
+   (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(7일 후 삭제)에 동의합니다.</span></label>')+
+   '<div id="rMsg"></div><button class="btn" id="rGo">예약하기</button>';
+  $("#bg").classList.add("open");$("#rName").focus();
+  if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
+  if(admin){
+    const t1=$("#rT1"),t2=$("#rT2");
+    t1.onchange=()=>{if(t1.checked)t2.checked=false;else t1.checked=true};
+    t2.onchange=()=>{if(t2.checked)t1.checked=false;else t2.checked=true};
+  }
+  $("#rName").oninput=()=>{
+    const n=$("#rName").value.trim(),p=(n&&!EXT)?activePass(n,D):null;
+    if(!p){$("#rBadge").innerHTML="";return}
+    const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
+    const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=p.end.split("-").map(Number);
+    const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
+    const used=db.reservations.filter(r=>r.date===D&&norm(r.name)===norm(n)&&r.status==="확정").length;
+    const remain=p.limit?Math.max(p.limit-used,0)+"회 남음":"무제한";
+    $("#rBadge").innerHTML='<i class="badge">이용권 회원</i><b style="font-size:13px;margin-left:6px;color:var(--accent-text)">'+(D===allowedDates()[0]?"오늘":"내일")+' 이용 '+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
+  };
+  let busy=false;
+  $("#rGo").onclick=()=>{
+    if(busy)return;busy=true;$("#rGo").disabled=true;
+    const r=reserve(D,h,$("#rName").value,$("#rPw").value,admin||$("#rC").checked,EXT?"ext":(admin?($("#rT2").checked?"adminExt":"adminStudent"):"student"));
+    if(!r.ok){
+      $("#rMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';
+      busy=false;$("#rGo").disabled=false;
+      if(r.refresh){admin?renderProxy():renderBook()}
+      return;
+    }
+    $("#sheet").classList.add("done");$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.pass?'<i class="badge">이용권</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
+    burst();$("#ok").onclick=closeSheet;if(admin){renderProxy()}else{selHour=null;curDate=allowedDates()[0];renderBook()}
+  };
+}
+function burst(){
+  if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const sh=$("#sheet"),cols=["#0e9194","#5fd4d6","#e0a94d","#f2c14e"];
+  for(let i=0;i<30;i++){
+    const c=document.createElement("i");c.className="conf";
+    const a=Math.random()*Math.PI*2,r=60+Math.random()*120;
+    c.style.cssText="background:"+cols[i%cols.length]+";--dx:"+Math.round(Math.cos(a)*r)+"px;--dy:"+Math.round(Math.sin(a)*r+80)+"px;--rot:"+Math.round(Math.random()*720-360)+"deg;animation-delay:"+(Math.random()*0.08).toFixed(2)+"s";
+    sh.appendChild(c);
+  }
+}
+function closeSheet(){$("#sheet").classList.remove("done");$("#bg").classList.remove("open")}
+$("#actGo").onclick=openChooser;
+$("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
+$("#mName").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#mPw").focus()}});
+$("#mPw").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#mFind").click()}});
+$("#mFind").onclick=()=>{
+  const name=$("#mName").value,pw=$("#mPw").value;
+  const r=lookup(name,pw);
+  if(!r.ok){$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
+  let h="";
+  if(r.pass){
+    const P=r.pass,dts=allowedDates();
+    const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=P.end.split("-").map(Number);
+    const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
+    const rem=d=>{if(!(P.start<=d&&d<=P.end))return "이용권 기간 아님";if(!P.limit)return "무제한";const u=db.reservations.filter(x=>x.date===d&&norm(x.name)===norm(P.name)&&x.status==="확정").length;return Math.max(P.limit-u,0)+"회 남음"};
+    h+='<div class="card"><b>이용권 회원</b><span class="badge">이용권</span>'+
+      '<div style="margin-top:8px;font-weight:700;color:var(--accent-text)">오늘 이용 '+rem(dts[0])+'<br>내일 이용 '+rem(dts[1])+'</div>'+
+      '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
+  }
+  if(!r.list.length)h+='<div class="msg ok">예약 내역이 없습니다.</div>';
+  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.pass?'<span class="badge">이용권</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
+  $("#mOut").innerHTML='<div class="card">'+h+'</div>';
+  document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m,name,pw));
+  document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
+    if(!confirm("이 예약을 취소하시겠습니까?"))return;
+    const c=cancelOwn(+b.dataset.c,name,pw);
+    if(!c.ok){alert(c.msg);return}
+    $("#mFind").click();
+  });
+};
+
+$("#toAdmin").onclick=()=>go("admin");
+$("#aPw").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#aGo").click()}});
+$("#aGo").onclick=()=>{
+  if($("#aPw").value!==db.admin){$("#aMsg").innerHTML='<div class="msg err">비밀번호가 일치하지 않습니다.</div>';return}
+  adminOn=true;$("#adminLogin").classList.add("hidden");$("#adminPane").classList.remove("hidden");renderAdmin();
+};
+function addMonthsEnd(ds,n){const [y,m,d]=ds.split("-").map(Number);const last=new Date(Date.UTC(y,m-1+n+1,0)).getUTCDate();const t=new Date(Date.UTC(y,m-1+n,Math.min(d,last)));t.setUTCDate(t.getUTCDate()-1);return t.toISOString().slice(0,10)}
+function limCtl(p,limit){
+  const opts=Array.from({length:24},(_,i)=>'<option value="'+(i+1)+'"'+(limit===i+1?' selected':'')+'>'+(i+1)+'회</option>').join("")+'<option value="0"'+(limit?'':' selected')+'>무제한</option>';
+  return '<label for="'+p+'Lim">하루 이용 횟수</label><select id="'+p+'Lim" style="width:100%">'+opts+'</select>';
+}
+function limBind(p){}
+function limRead(p){
+  const n=Number($("#"+p+"Lim").value);
+  if(!Number.isInteger(n)||n<0||n>24)return {ok:false,msg:"하루 이용 횟수를 선택하십시오."};
+  return {ok:true,limit:n||null};
+}
+function addPass(name,pw,start,months,limit){
+  name=norm(name.trim());
+  if(!validName(name))return {ok:false,msg:"이름을 한글 2~5자 또는 영문으로 입력하십시오."};
+  if(!/^\d{4}$/.test(pw))return {ok:false,msg:"비밀번호는 숫자 4자리입니다."};
+  if(!start||!(months>=1))return {ok:false,msg:"시작일과 기간을 확인하십시오."};
+  if(db.passes.some(p=>norm(p.name)===name&&p.end>=start))return {ok:false,msg:"이미 유효한 이용권이 있습니다. 기간을 연장하십시오."};
+  db.passes.push({name,pw,start,end:addMonthsEnd(start,months),limit:limit||null});db.log.push(nowSeoul()+" 이용권 등록");return {ok:true};
+}
+let editPass=null;
+function isEditing(){return editPass!==null&&!!db.passes[editPass]}
+function editHtml(){
+  const p=db.passes[editPass];
+  return '<div class="card"><b>이용권 수정</b><label for="eName">이름</label><input type="text" id="eName" autocomplete="off" value="'+esc(p.name)+'"><label for="ePw">새 비밀번호 4자리</label><input type="password" id="ePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="비워 두면 그대로 유지"><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'">'+limCtl("e",p.limit)+'<p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button></div>';
+}
+function bindEdit(){
+  $("#eBack").onclick=()=>{editPass=null;renderAdmin()};limBind("e");
+  $("#eSave").onclick=()=>{
+    const p=db.passes[editPass],old=norm(p.name);
+    const name=norm($("#eName").value.trim()),pw=$("#ePw").value,s=$("#eStart").value,e=$("#eEnd").value;
+    const err=m=>{$("#eMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    if(!validName(name)){err("이름을 한글 2~5자 또는 영문으로 입력하십시오.");return}
+    if(pw&&!/^\d{4}$/.test(pw)){err("비밀번호는 숫자 4자리입니다.");return}
+    const lm=limRead("e");if(!lm.ok){err(lm.msg);return}
+    if(!s||!e||s>e){err("시작일과 종료일을 확인하십시오. 종료일은 시작일과 같거나 이후여야 합니다.");return}
+    if(db.passes.some((q,i)=>i!==editPass&&norm(q.name)===name&&q.start<=e&&q.end>=s)){err("같은 이름의 다른 이용권과 기간이 겹칩니다.");return}
+    db.reservations.forEach(r=>{if(r.pass&&r.status==="확정"&&norm(r.name)===old){r.name=name;if(pw)r.pw=pw}});
+    p.name=name;if(pw){p.pw=pw;db.fails[name]={n:0,until:""}}
+    p.start=s;p.end=e;p.limit=lm.limit;db.log.push(nowSeoul()+" 이용권 수정");
+    editPass=null;renderAdmin();
+  };
+}
+function passCardHtml(){
+  if(isEditing())return editHtml();
+  const t=seoulDate();
+  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pe="'+i+'">1개월 연장</button><button class="btn ghost small" data-pm="'+i+'">수정</button><button class="btn danger small" data-pd="'+i+'">종료</button></div></div></div>').join("");
+  return '<div class="card"><b>이용권 등록</b>'+
+    '<div class="cols c2"><div><label for="gName">이름</label><input type="text" id="gName" autocomplete="off"></div><div><label for="gPw">이용권 비밀번호 4자리</label><input type="password" id="gPw" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
+    '<div class="cols c3"><div><label for="gStart">시작일</label><input type="date" id="gStart" value="'+t+'"></div><div><label for="gMon">기간 (개월)</label><input type="number" id="gMon" min="1" max="12" value="1"></div><div>'+limCtl("g",5)+'</div></div>'+
+    '<p class="hint" id="gEnd"></p><div id="gMsg"></div><button class="btn" id="gGo">이용권 등록</button></div>'+
+    '<div class="card"><b>등록된 이용권</b>'+(list||'<p class="hint">등록된 이용권이 없습니다.</p>')+'</div>';
+}
+function bindPass(){
+  if(isEditing()){bindEdit();return}
+  const upd=()=>{const s=$("#gStart").value,m=+$("#gMon").value;$("#gEnd").textContent=s&&m>0?"종료일: "+addMonthsEnd(s,m):""};
+  $("#gStart").oninput=upd;$("#gMon").oninput=upd;upd();limBind("g");
+  $("#gGo").onclick=()=>{const lm=limRead("g");if(!lm.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(lm.msg)+'</div>';return}const r=addPass($("#gName").value,$("#gPw").value,$("#gStart").value,+$("#gMon").value,lm.limit);if(!r.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}renderAdmin()};
+  document.querySelectorAll("[data-pm]").forEach(b=>b.onclick=()=>{editPass=+b.dataset.pm;renderAdmin()});
+  document.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>{const p=db.passes[+b.dataset.pe],t=seoulDate();if(p.end>=t){p.end=addMonthsEnd(addDays(p.end,1),1)}else{p.start=t;p.end=addMonthsEnd(t,1)}renderAdmin()});
+  document.querySelectorAll("[data-pd]").forEach(b=>b.onclick=()=>{if(!confirm("이 이용권을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;db.passes[+b.dataset.pd].end=addDays(seoulDate(),-1);renderAdmin()});
+}
+function setHtml(){return '<div class="card"><b>관리자 비밀번호 변경</b><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="off"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="off"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="off"><p class="hint">실제 서비스에서는 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
+function bindSet(){
+  $("#sGo").onclick=()=>{
+    const c=$("#sCur").value,n=$("#sNew").value,n2=$("#sNew2").value;
+    const show=(ok,t)=>{$("#sMsg").innerHTML='<div class="msg '+(ok?"ok":"err")+'">'+esc(t)+'</div>'};
+    if(c!==db.admin){show(false,"현재 비밀번호가 일치하지 않습니다.");return}
+    if(n.length<4){show(false,"새 비밀번호는 4자 이상이어야 합니다.");return}
+    if(n!==n2){show(false,"새 비밀번호 확인이 일치하지 않습니다.");return}
+    db.admin=n;db.log.push(nowSeoul()+" 관리자 비밀번호 변경");
+    $("#sCur").value="";$("#sNew").value="";$("#sNew2").value="";
+    show(true,"비밀번호를 변경했습니다.");
+  };
+}
+function blockHtml2(){
+  const t=seoulDate(),pad=n=>String(n).padStart(2,"0");
+  const groups={};
+  db.blocked.forEach(b=>{const k=b.gid||("h"+b.date+"-"+b.hour);(groups[k]=groups[k]||[]).push(b)});
+  const fmt=(d,h)=>dateLabel(d)+" "+pad(h)+":00";
+  const list=Object.entries(groups).map(([k,a])=>{
+    a.sort((x,y)=>(x.date+pad(x.hour)).localeCompare(y.date+pad(y.hour)));
+    const f=a[0],l=a[a.length-1];
+    return {k,sd:f.date,sh:f.hour,ed:l.hour===23?addDays(l.date,1):l.date,eh:(l.hour+1)%24,reason:f.reason,last:l.date};
+  }).filter(g=>g.last>=t).sort((x,y)=>(x.sd+pad(x.sh)).localeCompare(y.sd+pad(y.sh)));
+  const items=list.map(g=>'<div class="item"><div class="row"><div><b>'+fmt(g.sd,g.sh)+' ~ '+fmt(g.ed,g.eh)+'</b><div class="hint">'+esc(g.reason||"사유 없음")+'</div></div><button class="btn danger small" data-bd="'+esc(g.k)+'">해제</button></div></div>').join("");
+  return '<div class="card"><b>이용 불가 시간 설정</b><label for="bSD">시작 날짜</label><input type="date" id="bSD" value="'+t+'" min="'+t+'"><label for="bSH">시작 시각 (0~23)</label><input type="number" id="bSH" min="0" max="23" value="1"><label for="bED">종료 날짜</label><input type="date" id="bED" value="'+t+'" min="'+t+'"><label for="bEH">종료 시각 (이 시각까지 이용 불가, 0~23)</label><input type="number" id="bEH" min="0" max="23" value="6"><p class="hint" id="bPrev"></p><label for="bReason">사유 (선택)</label><input type="text" id="bReason" maxlength="30" autocomplete="off" placeholder="예: 장비 점검"><div id="bMsg"></div><button class="btn" id="bGo">이용 불가로 설정</button></div><div class="card"><b>설정된 이용 불가</b>'+(items||'<p class="hint">설정된 이용 불가가 없습니다.</p>')+'</div>';
+}
+function bindBlock2(){
+  const pad=n=>String(n).padStart(2,"0");
+  const read=()=>({sd:$("#bSD").value,sh:Number($("#bSH").value),ed:$("#bED").value,eh:Number($("#bEH").value)});
+  const valid=v=>v.sd&&v.ed&&Number.isInteger(v.sh)&&Number.isInteger(v.eh)&&v.sh>=0&&v.sh<=23&&v.eh>=0&&v.eh<=23&&(v.ed+pad(v.eh))>(v.sd+pad(v.sh));
+  const upd=()=>{const v=read();$("#bPrev").textContent=valid(v)?dateLabel(v.sd)+" "+pad(v.sh)+":00 ~ "+dateLabel(v.ed)+" "+pad(v.eh)+":00":""};
+  ["#bSD","#bSH","#bED","#bEH"].forEach(s=>{$(s).oninput=upd});
+  $("#bSD").oninput=()=>{if($("#bED").value<$("#bSD").value)$("#bED").value=$("#bSD").value;upd()};
+  upd();
+  $("#bGo").onclick=()=>{
+    const v=read(),reason=$("#bReason").value.trim();
+    const err=m=>{$("#bMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    if(!v.sd||v.sd<seoulDate()){err("시작 날짜는 오늘 이후로 선택하십시오.");return}
+    if(!valid(v)){err("시간을 확인하십시오. 종료는 시작보다 늦어야 하며, 시각은 0~23이어야 합니다.");return}
+    const slots=[];let d=v.sd,h=v.sh;
+    while(d<v.ed||(d===v.ed&&h<v.eh)){slots.push([d,h]);h++;if(h===24){h=0;d=addDays(d,1)}if(slots.length>2160)break}
+    if(slots.length>2160){err("한 번에 최대 90일까지만 설정할 수 있습니다.");return}
+    const keys=new Set(slots.map(s=>s[0]+"|"+s[1]));
+    const hit=db.reservations.filter(r=>r.status==="확정"&&keys.has(r.date+"|"+r.hour));
+    if(hit.length&&!confirm("이 기간에 예약이 "+hit.length+"건 있습니다: "+hit.map(r=>r.name+" "+r.date.slice(5)+" "+r.hour+"시").join(", ")+"\n모두 취소하고 이용 불가로 설정하시겠습니까?"))return;
+    hit.forEach(r=>{r.status="취소";r.reason="관리자 취소: 이용 불가"+(reason?" ("+reason+")":"")});
+    const gid="g"+(db.nextId++);
+    slots.forEach(([sd,sh])=>{if(!db.blocked.some(b=>b.date===sd&&b.hour===sh))db.blocked.push({date:sd,hour:sh,reason,gid})});
+    db.log.push(nowSeoul()+" 이용 불가 설정 "+v.sd+" "+v.sh+" ~ "+v.ed+" "+v.eh);
+    renderAdmin();
+  };
+  document.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{
+    if(!confirm("이 이용 불가를 해제하시겠습니까?"))return;
+    const k=b.dataset.bd;
+    db.blocked=db.blocked.filter(x=>(x.gid||("h"+x.date+"-"+x.hour))!==k);
+    renderAdmin();
+  });
+}
+function fmtPhone(v){
+  const d=String(v||"").replace(/\D/g,"");
+  if(!/^01\d{8,9}$/.test(d))return null;
+  return d.length===11?d.replace(/(\d{3})(\d{4})(\d{4})/,"$1-$2-$3"):d.replace(/(\d{3})(\d{3})(\d{4})/,"$1-$2-$3");
+}
+let editExt=null;
+function extHtml(){
+  if(editExt!==null&&db.externals[editExt]){
+    const e=db.externals[editExt];
+    return '<div class="card"><b>외부 이용자 수정</b>'+
+      '<div class="cols c2"><div><label for="eeName">이름 (본명) <span class="req" aria-hidden="true">*</span></label><input type="text" id="eeName" aria-required="true" autocomplete="off" value="'+esc(e.name)+'"></div><div><label for="eePw">비밀번호 4자리</label><input type="password" id="eePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="변경 시에만 입력"></div></div>'+
+      '<label for="eePhone">전화번호 <span class="req" aria-hidden="true">*</span></label><input type="tel" id="eePhone" aria-required="true" inputmode="tel" autocomplete="off" value="'+esc(e.phone||"")+'" placeholder="010-0000-0000">'+
+      '<label for="eeMemo">메모 (선택)</label><input type="text" id="eeMemo" maxlength="100" autocomplete="off" value="'+esc(e.memo||"")+'">'+
+      '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약에도 동일하게 적용됩니다.</p><div id="eeMsg"></div><button class="btn" id="eeSave">저장</button><button class="btn ghost" id="eeBack">수정 취소</button></div>';
+  }
+  const list=db.externals.map((e,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(e.name)+'</b><div class="hint">'+esc(e.phone||"전화번호 없음")+'</div>'+(e.memo?'<div class="hint">'+esc(e.memo)+'</div>':"")+'</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" style="background:#1e8e4e;color:#fff" data-xc="'+i+'"'+(e.phone?'':' disabled')+'>통화</button><button class="btn ghost small" data-xm="'+i+'">수정</button><button class="btn danger small" data-xd="'+i+'">삭제</button></div></div></div>').join("");
+  return '<div class="card"><b>외부 이용자 등록</b>'+
+    '<div class="cols c2"><div><label for="xName">이름 (본명) <span class="req" aria-hidden="true">*</span></label><input type="text" id="xName" aria-required="true" autocomplete="off"></div><div><label for="xPw">비밀번호 4자리 <span class="req" aria-hidden="true">*</span></label><input type="password" id="xPw" aria-required="true" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
+    '<label for="xPhone">전화번호 <span class="req" aria-hidden="true">*</span></label><input type="tel" id="xPhone" aria-required="true" inputmode="tel" autocomplete="off" placeholder="010-0000-0000">'+
+    '<label for="xMemo">메모 (선택)</label><input type="text" id="xMemo" maxlength="100" autocomplete="off">'+
+    '<div id="xMsg"></div><button class="btn" id="xGo">외부 이용자 등록</button></div>'+
+    '<div class="card"><b>등록된 외부 이용자</b>'+(list||'<p class="hint">등록된 외부 이용자가 없습니다.</p>')+'</div>';
+}
+function bindExt(){
+  const xg=$("#xGo");if(xg)xg.onclick=()=>{
+    const name=norm($("#xName").value.trim()),pw=$("#xPw").value,phone=fmtPhone($("#xPhone").value);
+    const err=m=>{$("#xMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    if(!validName(name)){err("이름을 한글 2~5자 또는 영문으로 입력하십시오.");return}
+    if(!/^\d{4}$/.test(pw)){err("비밀번호는 숫자 4자리입니다.");return}
+    if(!phone){err("전화번호를 올바르게 입력하십시오. (예: 010-1234-5678)");return}
+    if(db.externals.some(e=>norm(e.name)===name&&e.pw===pw)){err("같은 이름과 비밀번호로 등록된 외부 이용자가 이미 있습니다. 다른 비밀번호를 사용하십시오.");return}
+    db.externals.push({name,pw,phone,memo:$("#xMemo").value.trim()});db.log.push(nowSeoul()+" 외부 이용자 등록");renderAdmin();
+  };
+  document.querySelectorAll("[data-xc]").forEach(b=>b.onclick=()=>{
+    const e=db.externals[+b.dataset.xc];
+    if(!e||!e.phone)return;
+    if(!confirm(e.name+"님("+e.phone+")에게 전화를 거시겠습니까?"))return;
+    const a=document.createElement("a");a.href="tel:"+e.phone.replace(/\D/g,"");a.target="_top";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+  });
+  document.querySelectorAll("[data-xm]").forEach(b=>b.onclick=()=>{editExt=+b.dataset.xm;renderAdmin()});
+  const eb=$("#eeBack");if(eb)eb.onclick=()=>{editExt=null;renderAdmin()};
+  const es=$("#eeSave");if(es)es.onclick=()=>{
+    const e=db.externals[editExt],old=norm(e.name),oldPw=e.pw;
+    const name=norm($("#eeName").value.trim()),pw=$("#eePw").value,phone=fmtPhone($("#eePhone").value);
+    const err=m=>{$("#eeMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    if(!validName(name)){err("이름을 한글 2~5자 또는 영문으로 입력하십시오.");return}
+    if(!phone){err("전화번호를 올바르게 입력하십시오. (예: 010-1234-5678)");return}
+    if(pw&&!/^\d{4}$/.test(pw)){err("비밀번호는 숫자 4자리입니다.");return}
+    if(db.externals.some((x,i)=>i!==editExt&&norm(x.name)===name&&x.pw===(pw||e.pw))){err("같은 이름과 비밀번호로 등록된 외부 이용자가 이미 있습니다. 다른 비밀번호를 사용하십시오.");return}
+    db.reservations.forEach(r=>{if(r.ext&&r.status==="확정"&&norm(r.name)===old&&r.pw===oldPw){r.name=name;if(pw)r.pw=pw}});
+    e.name=name;e.phone=phone;e.memo=$("#eeMemo").value.trim();if(pw)e.pw=pw;
+    db.fails["ext:"+old]={n:0,until:""};db.fails["ext:"+name]={n:0,until:""};
+    db.log.push(nowSeoul()+" 외부 이용자 수정");
+    editExt=null;renderAdmin();
+  };
+  document.querySelectorAll("[data-xd]").forEach(b=>b.onclick=()=>{
+    if(!confirm("이 외부 이용자를 삭제하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
+    db.externals.splice(+b.dataset.xd,1);renderAdmin();
+  });
+}
+let setPage=null;
+function settingsHtml(){
+  const back='<button class="btn ghost small" id="setBack" style="margin-bottom:10px">← 설정</button>';
+  if(setPage==="block")return back+blockHtml2();
+  if(setPage==="pass")return back+passCardHtml();
+  if(setPage==="pw")return back+setHtml();
+  if(setPage==="proxy")return back+proxyHtml();
+  return '<div class="card"><b>설정</b><div class="item"><button data-sp="pass" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">이용권</button></div><div class="item"><button data-sp="proxy" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 예약</button></div><div class="item"><button data-sp="block" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">이용 불가 시간 설정</button></div><div class="item"><button data-sp="pw" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 비밀번호 변경</button></div></div>';
+}
+function bindSettings(){
+  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin()});
+  const back=$("#setBack");if(back)back.onclick=()=>{setPage=null;editPass=null;renderAdmin()};
+  if(setPage==="block")bindBlock2();
+  if(setPage==="pass")bindPass();
+  if(setPage==="pw")bindSet();
+  if(setPage==="proxy")renderProxy();
+}
+let adminTab="list",curDateA=null;
+function tabBtns(){return [["list","예약 목록"],["ext","외부 이용자"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}
+function applyAdminTab(){
+  ["list","ext","block"].forEach(k=>$("#sec-"+k).classList.toggle("hidden",k!==adminTab));
+  document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editPass=null;editExt=null;renderAdmin()}});
+}
+function proxyHtml(){return '<div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div>'}
+function bindProxy(){renderProxy()}
+function renderProxy(){
+  const dates=allowedDates();
+  if(!dates.includes(curDateA))curDateA=dates[0];
+  $("#pTabs").innerHTML=dates.map((d,i)=>'<button class="tab" role="tab" data-pdt="'+d+'" aria-selected="'+(d===curDateA)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
+  document.querySelectorAll("[data-pdt]").forEach(t=>t.onclick=()=>{curDateA=t.dataset.pdt;renderProxy()});
+  const cells=publicStatus(curDateA).map(s=>{
+    const r=db.reservations.find(x=>x.date===curDateA&&x.hour===s.hour&&x.status==="확정");
+    let cls="free",txt="예약 가능",dis="";
+    if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(r.name)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+    else if(s.past){cls="past";txt="";dis="disabled"}
+    return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
+  });
+  $("#pGrid").innerHTML=cells.slice(0,12).join("");$("#pGrid2").innerHTML=cells.slice(12).join("");
+  document.querySelectorAll("#pGrid .slot.free, #pGrid2 .slot.free").forEach(b=>b.onclick=()=>openSheet(+b.dataset.h,true));
+}
+function renderAdmin(){
+  const rows=[...db.reservations].sort((a,b)=>slotStart(a.date,a.hour).localeCompare(slotStart(b.date,b.hour)));
+  $("#adminPane").innerHTML=
+   '<div class="tabs" id="aTabs">'+tabBtns()+'</div><div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
+   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--accent-text)')+'">'+esc(r.name)+'</b>'+(r.pass?'<span class="badge">이용권</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
+   '</div></div>'+
+   '</div><div id="sec-ext">'+extHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
+   '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn small" id="out" style="background:#6b4fa0;color:#fff;padding:0 22px">로그아웃</button></div>';
+  $("#out").onclick=()=>{adminOn=false;$("#adminPane").classList.add("hidden");$("#adminLogin").classList.remove("hidden");$("#aPw").value="";$("#aMsg").innerHTML=""};
+  document.querySelectorAll("[data-ac]").forEach(b=>b.onclick=()=>{
+    const reason=prompt("취소 사유를 입력하십시오 (예: 장비 점검)");
+    if(reason===null)return;
+    const r=db.reservations.find(x=>x.id===+b.dataset.ac);r.status="취소";r.reason="관리자 취소: "+(reason||"사유 없음");
+    db.log.push(nowSeoul()+" 관리자취소 #"+r.id);renderAdmin();
+  });
+  document.querySelectorAll("[data-rp]").forEach(b=>b.onclick=()=>{
+    const r=db.reservations.find(x=>x.id===+b.dataset.rp);
+    const v=prompt("새 비밀번호 4자리를 입력하십시오 ("+r.name+")");
+    if(v===null)return;
+    if(!/^\d{4}$/.test(v)){alert("비밀번호는 숫자 4자리입니다.");return}
+    r.pw=v;db.fails[norm(r.name)]={n:0,until:""};db.log.push(nowSeoul()+" 예약 비밀번호 재설정 #"+r.id);
+    alert("변경했습니다. 새 비밀번호를 예약자에게 알리십시오.");
+  });
+  bindExt();bindSettings();applyAdminTab();
+}
+
+$("#applyNow").onclick=()=>{const v=$("#fakeNow").value;if(!v)return;fakeNow=v.length===16?v+":00":v;renderBook()};
+$("#resetNow").onclick=()=>{fakeNow=null;$("#fakeNow").value="";renderBook()};
+
+seed();renderBook();
+setInterval(()=>{if(!$("#v-book").classList.contains("hidden")&&!$("#bg").classList.contains("open"))renderBook()},30000);
+</script>
+</body>
+</html>

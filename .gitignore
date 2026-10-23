@@ -1,0 +1,14 @@
+# 비밀 키가 들어가는 파일은 절대 커밋하지 않습니다.
+.env
+.env.*
+!.env.example
+
+# Supabase CLI 임시 파일
+supabase/.temp/
+supabase/.branches/
+
+# 기타
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
