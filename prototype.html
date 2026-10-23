@@ -125,6 +125,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 @keyframes fall{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
 @media(prefers-reduced-motion:reduce){.sheet.done *{animation:none!important;opacity:1}.ck circle,.ck path{stroke-dashoffset:0}.conf{display:none}}
 .hidden{display:none!important}
+.ver{text-align:right;font-size:11px;color:var(--sub);margin:28px 0 0;letter-spacing:.02em}
 #vprobe{position:fixed;left:0;bottom:0;width:0;height:0;pointer-events:none;visibility:hidden}
 #safeprobe{position:fixed;left:0;top:0;width:0;height:0;padding-bottom:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden}
 </style>
@@ -175,6 +176,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     </div>
     <div id="adminPane" class="hidden"></div>
   </section>
+  <p class="ver" id="ver"></p>
 </div>
 
 <div id="actBar" class="actbar hidden"><div class="actin"><div id="actTxt"></div><button class="btn" id="actGo">예약하기</button></div></div>
@@ -189,6 +191,8 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 <script>
 "use strict";
+/* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
+const APP_VERSION="v0.1.2";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -780,6 +784,7 @@ window.addEventListener("resize",fitViewport);
 window.addEventListener("orientationchange",()=>setTimeout(fitViewport,300));
 document.addEventListener("focusout",()=>setTimeout(fitViewport,300));
 
+$("#ver").textContent=APP_VERSION;
 seed();renderBook();fitViewport();
 setInterval(()=>{if(!$("#v-book").classList.contains("hidden")&&!$("#bg").classList.contains("open"))renderBook()},30000);
 </script>
