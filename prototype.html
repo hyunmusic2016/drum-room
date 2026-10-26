@@ -199,7 +199,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.13.2";
+const APP_VERSION="v0.13.3";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -481,10 +481,8 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     const p=(!admin&&n&&/^\d{4}$/.test(pw))?(EXT?activeProd("ext",n,D,pw):activeProd("stu",n,D,pw)):null;
     if(!p){$("#rBadge").innerHTML="";return}
     const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
-    const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=p.end.split("-").map(Number);
-    const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const remain=p.kind==="count"?prodLeftText(p,D):(D===allowedDates()[0]?"오늘":"내일")+" 이용 "+prodLeftText(p,D);
-    $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
+    $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+leftText(p)+'</span>';
   };
   $("#rName").oninput=badge;$("#rPw").oninput=badge;
   let busy=false;
@@ -569,12 +567,10 @@ $("#mFind").onclick=()=>{
   let h="";
   if(r.pass){
     const P=r.pass,dts=allowedDates();
-    const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=P.end.split("-").map(Number);
-    const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const col=P.target==="ext"?"--ext-text":"--stu-text";
     h+='<div class="card"><b>'+PROD[P.kind]+' 회원</b><span class="badge '+P.kind+'">'+PROD[P.kind]+'</span>'+
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
-      '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
+      '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+leftText(P)+'</div></div>';
   }
   const now=r.list.filter(x=>!ended(x.date,x.hour)); // 지난 예약은 아래 '예약 기록'에서 봅니다.
   if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
@@ -600,6 +596,8 @@ $("#aGo").onclick=()=>{
 const PERIOD_DAYS=30;
 function periodEnd(start,days){return addDays(start,days-1)}
 function spanDays(start,end){return Math.round((Date.parse(end)-Date.parse(start))/864e5)+1} // 시작일~종료일 일수(양 끝 포함)
+/* 남은 기간: 오늘을 포함해 셉니다(오늘 30일짜리를 등록하면 "30일 남음", 마지막 날은 "1일 남음(오늘까지)"). */
+function leftText(q){const t=seoulDate();if(q.start>t)return "시작 예정";const n=spanDays(t,q.end);return n<=0?"기간 종료":n===1?"1일 남음(오늘까지)":n+"일 남음"}
 function periodText(start,days){return "종료일: "+periodEnd(start,days)+" ("+days+"일)"}
 function daysVal(id){const v=$("#"+id).value.trim();return /^\d{1,3}$/.test(v)&&+v>=1?+v:0} // 1~999일, 잘못된 값은 0
 function numInput(id,label,v,max){return '<label for="'+id+'">'+label+'</label><input type="text" id="'+id+'" inputmode="numeric" maxlength="'+String(max).length+'" autocomplete="off" placeholder="숫자" value="'+(v||"")+'">'}
@@ -827,11 +825,10 @@ function userViewHtml(){
   const ro=(label,v)=>'<div><label>'+label+'</label><div class="ro">'+(v?esc(v):'<span class="hint" style="margin:0">없음</span>')+'</div></div>';
   let prod;
   if(c){
-    const left=Math.round((Date.parse(c.end)-Date.parse(t))/864e5);
     const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
     prod='<div style="margin-bottom:6px"><span class="badge '+c.kind+'" style="margin-left:0">'+PROD[c.kind]+'</span></div><div>'+
       kv("기간",c.start+" ~ "+c.end)+
-      kv("남은 기간",c.start>t?"시작 예정":(left>0?left+"일 남음":"오늘까지"))+
+      kv("남은 기간",leftText(c))+
       (c.kind==="count"
         ?kv("총 이용 횟수",c.total+"회")+kv("사용한 횟수",prodUsed(c)+"회")+kv("남은 횟수",prodLeft(c)+"회")
         :kv("하루 이용 횟수",c.limit?c.limit+"회":"무제한")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>'+
