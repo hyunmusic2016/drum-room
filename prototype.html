@@ -67,6 +67,14 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
+details.hist{border:1px solid var(--line);border-radius:12px;padding:0 14px;margin-top:12px;background:var(--surface)}
+details.hist summary{list-style:none;cursor:pointer;min-height:50px;display:flex;align-items:center;gap:6px;font-weight:700}
+details.hist summary::-webkit-details-marker{display:none}
+details.hist summary small{font-weight:400;color:var(--sub)}
+details.hist summary::after{content:"펼치기 ▾";margin-left:auto;font-size:13px;font-weight:500;color:var(--accent-text)}
+details.hist[open] summary::after{content:"접기 ▴"}
+details.hist[open]{padding-bottom:8px}
+details.hist .item b{font-size:15px}
 .ro{min-height:48px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);overflow-wrap:anywhere}
 .kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
 .kv:first-child{border-top:0}.kv span{color:var(--sub)}.kv b{text-align:right}
@@ -210,7 +218,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.10.0";
+const APP_VERSION="v0.11.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -255,6 +263,14 @@ function seed(){
   .forEach(([d,h,n,p])=>db.reservations.push({id:db.nextId++,date:d,hour:h,name:n,pw:p,status:"확정",prod:n==="김정액"?"flat":null,prodId:n==="김정액"?1:null,reason:""}));
   db.blocked.push({date:tm,hour:3,reason:"점검"});
   db.passes.forEach(q=>{q.start=t;q.end=addMonthsEnd(t,1)});
+  /* 기록 보기 시험용 샘플: 지난 예약, 취소된 예약, 만료된 상품 */
+  db.passes.push({id:3,target:"ext",kind:"count",name:"김외부",pw:"0000",start:addDays(t,-61),end:addDays(t,-31),limit:null,total:10},
+                 {id:4,target:"stu",kind:"flat",name:"김정액",pw:"0000",start:addDays(t,-61),end:addDays(t,-31),limit:2,total:null});
+  db.nextPid=5;
+  [[addDays(t,-45),19,"김외부","0000",true,"count",3,"확정",""],[addDays(t,-40),20,"김외부","0000",true,"count",3,"확정",""],
+   [addDays(t,-5),18,"김외부","0000",true,null,null,"취소","본인 취소"],[addDays(t,-3),21,"김외부","0000",true,null,null,"확정",""],
+   [addDays(t,-50),15,"김정액","0000",false,"flat",4,"확정",""],[addDays(t,-2),16,"김정액","0000",false,null,null,"확정",""]]
+  .forEach(([d,h,n,p,ext,prod,pid,st,rs])=>db.reservations.push({id:db.nextId++,date:d,hour:h,name:n,pw:p,status:st,prod,prodId:pid,ext,reason:rs}));
 }
 const PROD={flat:"정액권",count:"이용권"};
 /* 해당 날짜에 쓸 수 있는 상품. 외부 이용자는 이름+비밀번호로 찾고, 재원생은 이름으로 찾은 뒤 비밀번호를 따로 확인합니다. */
@@ -529,6 +545,16 @@ function showUserDone(title,u){
     '<button class="btn" id="ok">확인</button>';
   $("#bg").classList.add("open");burst(kind);$("#ok").onclick=closeSheet;$("#ok").focus();
 }
+/* 예약 기록·지난 정액권·이용권(펼쳐 보기). 관리자 이용자 정보와 내 예약에서 함께 씁니다. 최신순. */
+function histHtml(resList,oldProds){
+  const rs=[...resList].sort((a,b)=>slotStart(b.date,b.hour).localeCompare(slotStart(a.date,a.hour)));
+  const st=x=>x.status==="취소"?'<span class="status-cancel">취소</span>'+(x.reason?' · '+esc(x.reason):''):(ended(x.date,x.hour)?'이용 시간 지남':'예약 확정');
+  const rItems=rs.map(x=>'<div class="item"><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':'')+'<div class="hint">'+st(x)+'</div></div>').join("");
+  const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
+  const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+prodUsed(q)+'회 사용':'하루 '+(q.limit?q.limit+'회':'무제한'))+' · 만료</div></div>').join("");
+  return '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
+    '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
+}
 function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.add("done",k);return k}
 const CONFETTI={stu:["#0e9194","#5fd4d6","#0a6f72","#9fe3e4"],ext:["#9C5238","#e0a48c","#c27a5c","#f2c9b4"]};
 function burst(kind){
@@ -561,9 +587,11 @@ $("#mFind").onclick=()=>{
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
   }
-  if(!r.list.length)h+='<div class="msg ok">예약 내역이 없습니다.</div>';
-  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
-  $("#mOut").innerHTML='<div class="card">'+h+'</div>';
+  const now=r.list.filter(x=>!ended(x.date,x.hour)); // 지난 예약은 아래 '예약 기록'에서 봅니다.
+  if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
+  h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
+  const t0=seoulDate(),old=db.passes.filter(q=>norm(q.name)===norm(name)&&q.pw===pw&&q.end<t0);
+  $("#mOut").innerHTML='<div class="card">'+h+'</div>'+histHtml(r.list,old);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m,name,pw));
   document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
     if(!confirm("이 예약을 취소하시겠습니까?"))return;
@@ -809,6 +837,8 @@ function bindStatus(){
 }
 /* 이용자 정보(읽기 전용): 수정 화면과 같은 배치 + 현재 정액권·이용권 + [수정][삭제] */
 let viewUser=null;
+function mineProd(u,q){return q.target===u.type&&norm(q.name)===norm(u.name)&&q.pw===u.pw}
+function userReservations(u){return db.reservations.filter(r=>!!r.ext===(u.type==="ext")&&norm(r.name)===norm(u.name)&&r.pw===u.pw)}
 function userViewHtml(){
   const u=db.users[viewUser],q=userProd(u),c=curProd(u),col=u.type==="ext"?'--ext-text':'--stu-text',t=seoulDate();
   const ro=(label,v)=>'<div><label>'+label+'</label><div class="ro">'+(v?esc(v):'<span class="hint" style="margin:0">없음</span>')+'</div></div>';
@@ -830,7 +860,8 @@ function userViewHtml(){
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
     '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
-    '<div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" id="vEdit" style="margin:0">수정</button><button class="btn danger" id="vDel" style="margin:0">삭제</button></div></div>';
+    '<div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" id="vEdit" style="margin:0">수정</button><button class="btn danger" id="vDel" style="margin:0">삭제</button></div>'+
+    '<div style="margin-top:22px">'+histHtml(userReservations(u),db.passes.filter(x=>mineProd(u,x)&&x.end<t))+'</div></div>';
 }
 function bindUserView(){
   const u=db.users[viewUser];
