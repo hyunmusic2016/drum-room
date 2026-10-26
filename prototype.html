@@ -199,7 +199,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.13.1";
+const APP_VERSION="v0.13.2";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -885,7 +885,11 @@ function bindUserView(){
   if(c&&c.kind==="count")bindTopup(u,c);
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
   $("#vDel").onclick=()=>{
-    if(!confirm(u.name+"님을 삭제하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
+    const t=seoulDate(),live=db.passes.filter(q=>mineProd(u,q)&&q.end>=t);
+    if(!confirm(u.name+"님을 삭제하시겠습니까?"+(live.length?"\n사용 중이거나 시작 예정인 "+live.map(q=>PROD[q.kind]).join("·")+"도 함께 종료됩니다.":"")+"\n이미 확정된 예약은 그대로 유지됩니다."))return;
+    // 삭제한 사람의 상품이 남아 있으면 같은 이름·비밀번호로 다시 등록할 때 기간이 겹치고, 재원생은 삭제 후에도 정액권으로 예약할 수 있으므로 함께 종료합니다.
+    // 이미 시작한 상품은 어제로 종료(지난 상품 기록으로 남음), 아직 시작 전인 상품은 지웁니다.
+    live.forEach(q=>{if(q.start<t)q.end=addDays(t,-1);else db.passes.splice(db.passes.indexOf(q),1)});
     db.users.splice(viewUser,1);db.log.push(nowSeoul()+" 이용자 삭제");viewUser=null;uFlash=u.name+"님을 삭제했습니다.";renderAdmin();
   };
 }
