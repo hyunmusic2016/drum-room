@@ -197,7 +197,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.3.1";
+const APP_VERSION="v0.3.2";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -478,7 +478,7 @@ function openFirstGuide(h){
    '<li><b>통화가 끝나면 등록된 이름과 비밀번호를 문자로 보내 드립니다.</b></li>'+
    '<li><b>문자를 받으신 뒤</b> "외부 이용자 예약하기"에서 안내받은 이름과 비밀번호로 예약하십시오.</li>'+
    '</ol>'+
-   '<div class="card" style="margin-top:14px"><span class="hint" style="margin:0">문의 가능 시간</span><div style="font-weight:700;font-size:17px">'+CONTACT_HOURS+'</div></div>'+
+   '<div class="card" style="margin-top:14px;text-align:center"><span class="hint" style="margin:0">문의 가능 시간</span><div style="font-weight:700;font-size:17px">'+CONTACT_HOURS+'</div></div>'+
    '<a class="btn call" href="tel:'+PHONE.replace(/\D/g,"")+'">전화 걸기 '+PHONE+'</a>';
   $("#sheet").scrollTop=0;
   $("#backExt").onclick=()=>openSheet(h,false,"ext");
