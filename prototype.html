@@ -198,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.3";
+const APP_VERSION="v0.4.4";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -559,13 +559,25 @@ function editHtml(){
   return '<div class="card"><b>이용권 수정</b>'+
     '<div class="cols c2"><div><label for="eName">이름</label><input type="text" id="eName" autocomplete="off" value="'+esc(p.name)+'"></div><div><label for="ePw">새 비밀번호 4자리</label><input type="password" id="ePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="비우면 유지"></div></div>'+
     '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'"></div><div>'+limCtl("e",p.limit)+'</div></div>'+
-    '<p class="hint" id="eDays"></p><p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button></div>';
+    '<div class="row" style="margin-top:8px"><p class="hint" id="eDays" style="margin:0"></p><button class="btn ghost small" id="eExt">1개월 연장</button></div>'+
+    '<p class="hint" id="eExtMsg"></p><p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button>'+
+    '<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:4px"><button class="btn danger" id="eStop">이용권 종료</button><p class="hint">종료하면 오늘부터 이 이용권으로 예약할 수 없습니다. 이미 확정된 예약은 그대로 유지됩니다.</p></div></div>';
 }
 function bindEdit(){
   $("#eBack").onclick=()=>{editPass=null;renderAdmin()};limBind("e");
   const upd=()=>{const s=$("#eStart").value,e=$("#eEnd").value;
     $("#eDays").textContent=s&&e&&s<=e?"이용 기간: "+(Math.round((Date.parse(e)-Date.parse(s))/864e5)+1)+"일":""};
   $("#eStart").oninput=upd;$("#eEnd").oninput=upd;upd();
+  $("#eExt").onclick=()=>{ // 종료일 칸만 1개월 늘립니다. 저장을 눌러야 반영됩니다.
+    const t=seoulDate(),e=$("#eEnd").value;
+    if(e&&e>=t){$("#eEnd").value=addMonthsEnd(addDays(e,1),1)}else{$("#eStart").value=t;$("#eEnd").value=addMonthsEnd(t,1)}
+    upd();$("#eExtMsg").textContent="종료일을 "+$("#eEnd").value+"(으)로 바꿨습니다. 저장을 눌러야 반영됩니다.";
+  };
+  $("#eStop").onclick=()=>{
+    if(!confirm("이 이용권을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
+    db.passes[editPass].end=addDays(seoulDate(),-1);db.log.push(nowSeoul()+" 이용권 종료");
+    editPass=null;renderAdmin();
+  };
   $("#eSave").onclick=()=>{
     const p=db.passes[editPass],old=norm(p.name);
     const name=norm($("#eName").value.trim()),pw=$("#ePw").value,s=$("#eStart").value,e=$("#eEnd").value;
@@ -584,7 +596,7 @@ function bindEdit(){
 function passCardHtml(){
   if(isEditing())return editHtml();
   const t=seoulDate();
-  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pe="'+i+'">1개월 연장</button><button class="btn ghost small" data-pm="'+i+'">수정</button><button class="btn danger small" data-pd="'+i+'">종료</button></div></div></div>').join("");
+  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pm="'+i+'">수정</button></div></div></div>').join("");
   return '<div class="card"><b>이용권 등록</b>'+
     '<div class="cols c2"><div><label for="gName">이름</label><input type="text" id="gName" autocomplete="off"></div><div><label for="gPw">이용권 비밀번호 4자리</label><input type="password" id="gPw" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
     '<div class="cols c3"><div><label for="gStart">시작일</label><input type="date" id="gStart" value="'+t+'"></div><div><label for="gMon">기간 (개월)</label><input type="number" id="gMon" min="1" max="12" value="1"></div><div>'+limCtl("g",5)+'</div></div>'+
@@ -597,8 +609,6 @@ function bindPass(){
   $("#gStart").oninput=upd;$("#gMon").oninput=upd;upd();limBind("g");
   $("#gGo").onclick=()=>{const lm=limRead("g");if(!lm.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(lm.msg)+'</div>';return}const r=addPass($("#gName").value,$("#gPw").value,$("#gStart").value,+$("#gMon").value,lm.limit);if(!r.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}renderAdmin()};
   document.querySelectorAll("[data-pm]").forEach(b=>b.onclick=()=>{editPass=+b.dataset.pm;renderAdmin()});
-  document.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>{const p=db.passes[+b.dataset.pe],t=seoulDate();if(p.end>=t){p.end=addMonthsEnd(addDays(p.end,1),1)}else{p.start=t;p.end=addMonthsEnd(t,1)}renderAdmin()});
-  document.querySelectorAll("[data-pd]").forEach(b=>b.onclick=()=>{if(!confirm("이 이용권을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;db.passes[+b.dataset.pd].end=addDays(seoulDate(),-1);renderAdmin()});
 }
 function setHtml(){return '<div class="card"><b>관리자 비밀번호 변경</b><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="off"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="off"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="off"><p class="hint">실제 서비스에서는 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
 function bindSet(){
