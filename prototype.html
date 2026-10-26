@@ -164,7 +164,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 
   <section id="v-book">
     <div class="tabs" id="dayTabs" role="tablist"></div>
-    <div class="legend"><span>예약 가능</span><span class="lg stu">원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div>
+    <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div>
     <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
     <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (이용권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
   </section>
@@ -201,7 +201,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.6";
+const APP_VERSION="v0.4.7";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -757,7 +757,7 @@ function applyAdminTab(){
   ["list","ext","block"].forEach(k=>$("#sec-"+k).classList.toggle("hidden",k!==adminTab));
   document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editPass=null;editExt=null;renderAdmin()}});
 }
-function proxyHtml(){return '<div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div>'}
+function proxyHtml(){return '<div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div>'}
 function bindProxy(){renderProxy()}
 function renderProxy(){
   const dates=allowedDates();
