@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--ext-btn:#c2491a;--stu-text:#14479c;--stu-btn:#14479c;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#c2491a;--ext-btn:#c2491a;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#0e9194;--accent-text:#5fd4d6;--stu-text:#8ab4ff;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#ff9a6b;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#0e9194;--accent-text:#5fd4d6;--stu-text:#8ab4ff;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#ff9a6b;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -42,7 +42,7 @@ h2{font-size:18px;font-weight:700;margin:20px 0 8px}
 .slot{min-height:64px;border:1.5px solid var(--line);border-radius:10px;background:var(--free);color:var(--ink);font:inherit;text-align:left;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:2px}
 .slot b{font-size:15px}
 .slot span{font-size:13px}
-.slot.free{border-color:var(--accent)}
+.slot.free{border-color:var(--accent-strong)}
 .slot.free span{color:var(--accent-text);font-weight:700}
 .slot.taken{background:var(--taken);cursor:not-allowed}
 .slot.taken.stu span{color:var(--stu-text);font-weight:700}
@@ -57,7 +57,7 @@ h2{font-size:18px;font-weight:700;margin:20px 0 8px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
 label{display:block;font-weight:700;font-size:14px;margin:16px 0 8px}
 input[type=text],input[type=password],input[type=tel],input[type=number],input[type=date]{width:100%;font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
-input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .hint{font-size:13px;color:var(--sub);margin:4px 0 0}
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
@@ -81,7 +81,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .check input{width:22px;height:22px;margin:0;flex:none}
 nav.mainnav{display:flex;border-bottom:1px solid var(--line);margin:14px 0 6px}
 nav.mainnav button{flex:1;min-height:50px;border:0;background:none;color:var(--sub);font:inherit;font-size:17px;font-weight:500;cursor:pointer}
-nav.mainnav button[aria-current="page"]{color:var(--accent-text);font-weight:700;box-shadow:inset 0 -3px 0 var(--accent)}
+nav.mainnav button[aria-current="page"]{color:var(--accent-text);font-weight:700;box-shadow:inset 0 -3px 0 var(--accent-strong)}
 .sheet-bg{position:fixed;inset:0;padding:16px;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10}
 .sheet-bg.open{display:flex}
 .sheet{background:var(--surface);width:100%;max-width:528px;border-radius:18px;padding:18px 16px 22px;max-height:78vh;max-height:78dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:up .18s ease-out}
@@ -110,8 +110,8 @@ input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .rules li{margin:9px 0;font-size:14px;line-height:1.7}
 #aTabs .tab{font-size:14px;padding:0 4px}
 select{flex:1;min-width:0;min-height:48px;font:inherit;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
-select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.part{font-weight:700;font-size:15px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent)}
+select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
+.part{font-weight:700;font-size:15px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent-strong)}
 .part small{font-weight:400;color:var(--sub);font-size:13px;margin-left:6px}
 .choose{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
 .tile{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:12px 10px 16px;min-height:200px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
@@ -127,8 +127,8 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .slot.sel span{color:inherit}
 .sheet.done{position:relative;overflow:hidden;text-align:center}
 .ck{display:block;width:84px;height:84px;margin:4px auto 0}
-.ck circle{fill:none;stroke:var(--accent);stroke-width:5;stroke-dasharray:227;stroke-dashoffset:227;animation:ckd .35s ease-out forwards}
-.ck path{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:52;stroke-dashoffset:52;animation:ckd .25s .3s ease-out forwards}
+.ck circle{fill:none;stroke:var(--accent-strong);stroke-width:5;stroke-dasharray:227;stroke-dashoffset:227;animation:ckd .35s ease-out forwards}
+.ck path{fill:none;stroke:var(--accent-strong);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:52;stroke-dashoffset:52;animation:ckd .25s .3s ease-out forwards}
 @keyframes ckd{to{stroke-dashoffset:0}}
 .sheet.done h2{animation:pop .3s .4s both}
 .sheet.done .card,.sheet.done .hint,.sheet.done #ok{animation:pop .3s .5s both}
@@ -198,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.3.4";
+const APP_VERSION="v0.4.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
