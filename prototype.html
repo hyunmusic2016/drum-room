@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#9C5238;--ext-btn:#9C5238;--ext-line:#9C5238;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;--cnt:#6e3f6b;--cnt-bg:#f1e6f0;--flat:#85590f;
+  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--nav-on:#14304d;--ext-text:#9C5238;--ext-btn:#9C5238;--ext-line:#9C5238;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;--cnt:#6e3f6b;--cnt-bg:#f1e6f0;--flat:#85590f;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--nav-on:#2d6596;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--nav-on:#2d6596;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -92,9 +92,12 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
 .check{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:13px;font-weight:400}
 .check input{width:22px;height:22px;margin:0;flex:none}
-nav.mainnav{display:flex;border-bottom:1px solid var(--line);margin:14px 0 6px}
-nav.mainnav button{flex:1;min-height:50px;border:0;background:none;color:var(--sub);font:inherit;font-size:17px;font-weight:500;cursor:pointer}
-nav.mainnav button[aria-current="page"]{color:var(--accent-text);font-weight:700;box-shadow:inset 0 -3px 0 var(--accent-strong)}
+/* 큰 메뉴(예약하기/내 예약): 흰 상자 안 두 버튼, 선택된 쪽은 진한 남색 바탕 + 흰 글씨 */
+nav.mainnav{display:flex;gap:4px;padding:4px;margin:16px 0 12px;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+nav.mainnav button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border:0;border-radius:10px;background:transparent;color:var(--ink);font:inherit;font-size:17px;font-weight:700;cursor:pointer}
+nav.mainnav button svg{width:20px;height:20px;flex:none}
+nav.mainnav button:not([aria-current="page"]):hover{background:var(--bg)}
+nav.mainnav button[aria-current="page"]{background:var(--nav-on);color:#fff;box-shadow:0 2px 6px rgba(20,48,77,.25)}
 .sheet-bg{position:fixed;inset:0;padding:16px;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10}
 .sheet-bg.open{display:flex}
 .sheet{background:var(--surface);width:100%;max-width:528px;border-radius:18px;padding:18px 16px 22px;max-height:78vh;max-height:78dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:up .18s ease-out}
@@ -160,8 +163,8 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <div class="wrap">
   <h1>드럼 연습실 예약</h1>
   <nav class="mainnav">
-    <button data-go="book" aria-current="page">예약하기</button>
-    <button data-go="mine">내 예약</button>
+    <button data-go="book" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>예약하기</button>
+    <button data-go="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>내 예약</button>
   </nav>
 
   <section id="v-book">
@@ -203,7 +206,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.11.2";
+const APP_VERSION="v0.11.3";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
