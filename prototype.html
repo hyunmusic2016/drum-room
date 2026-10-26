@@ -64,6 +64,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
+.smsbox{white-space:pre-line;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:8px;font-size:15px;line-height:1.6;user-select:text;-webkit-user-select:text}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.first{background:transparent;color:var(--ext-text);border:1.5px solid var(--ext-line);margin-top:14px}
 .steps{padding-left:22px;margin:12px 0 4px}
@@ -201,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.7";
+const APP_VERSION="v0.5.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -436,7 +437,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
    (admin?'':'<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
-   (admin?'':'<p class="hint">'+(EXT?'통화 시 등록하신 비밀번호 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
+   (admin?'':'<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
    (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(7일 후 삭제)에 동의합니다.</span></label>')+
    '<div id="rMsg"></div><button class="btn'+(EXT?' ext':(admin?'':' stu'))+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
@@ -478,9 +479,9 @@ function openFirstGuide(h){
    '<p style="margin:14px 0 0">외부 이용자는 관리자에게 등록하신 뒤 예약할 수 있습니다. 아래 순서대로 진행하십시오.</p>'+
    '<ol class="steps">'+
    '<li><b>관리자에게 전화하십시오.</b></li>'+
-   '<li><b>통화 중에 이름과 전화번호를 알려 주십시오.</b> 비밀번호는 연락하신 전화번호의 뒤 4자리로 등록됩니다.</li>'+
-   '<li><b>통화가 끝나면 등록된 이름과 비밀번호를 문자로 보내 드립니다.</b></li>'+
-   '<li><b>문자를 받으신 뒤</b> "외부 이용자 예약하기"에서 안내받은 이름과 비밀번호로 예약하십시오.</li>'+
+   '<li><b>통화 중에 성함과 전화번호를 알려 주십시오.</b> 비밀번호는 연락하신 전화번호의 뒤 4자리입니다.</li>'+
+   '<li><b>등록이 끝나면 등록 완료 안내 문자를 보내 드립니다.</b></li>'+
+   '<li><b>안내 문자를 받으신 뒤</b> "외부 이용자 예약하기"에서 성함과 전화번호 뒤 4자리로 예약하십시오.</li>'+
    '</ol>'+
    '<div class="card" style="margin-top:14px;text-align:center"><span class="hint" style="margin:0">문의 가능 시간</span><div style="font-weight:700;font-size:17px">'+CONTACT_HOURS+'</div></div>'+
    '<a class="btn call" href="tel:'+PHONE.replace(/\D/g,"")+'">전화 걸기 '+PHONE+'</a>';
@@ -674,6 +675,13 @@ function bindBlock2(){
     renderAdmin();
   });
 }
+/* 외부 이용자 등록 완료 안내 문구(단문 SMS 90바이트 이하). 한글 2바이트, 영문·숫자·기호·줄바꿈 1바이트로 셉니다. */
+const EXT_REG_SMS="등록이 완료되었습니다.\n외부 이용자 예약하기에서 성함과 전화번호 뒤 4자리로 예약하십시오.";
+function smsBytes(t){let n=0;for(const ch of t)n+=ch.charCodeAt(0)<128?1:2;return n}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);return true}catch(e){}
+  try{const ta=document.createElement("textarea");ta.value=t;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,t.length);const ok=document.execCommand("copy");ta.remove();return ok}catch(e){return false}
+}
 function fmtPhone(v){
   const d=String(v||"").replace(/\D/g,"");
   if(!/^01\d{8,9}$/.test(d))return null;
@@ -694,10 +702,17 @@ function extHtml(){
     '<div class="cols c2"><div><label for="xName">이름 (본명) <span class="req" aria-hidden="true">*</span></label><input type="text" id="xName" aria-required="true" autocomplete="off"></div><div><label for="xPw">비밀번호 4자리 <span class="req" aria-hidden="true">*</span></label><input type="password" id="xPw" aria-required="true" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
     '<label for="xPhone">전화번호 <span class="req" aria-hidden="true">*</span></label><input type="tel" id="xPhone" aria-required="true" inputmode="tel" autocomplete="off" placeholder="010-0000-0000">'+
     '<label for="xMemo">메모 (선택)</label><input type="text" id="xMemo" maxlength="100" autocomplete="off">'+
-    '<div id="xMsg"></div><button class="btn" id="xGo">외부 이용자 등록</button></div>'+
+    '<p class="hint">비밀번호는 연락하신 전화번호 뒤 4자리로 등록하십시오.</p><div id="xMsg"></div><button class="btn" id="xGo">외부 이용자 등록</button></div>'+
+    '<div class="card"><b>등록 안내 문자</b><p class="hint">등록을 마친 뒤 아래 문구를 복사해 문자로 보내 주십시오. 이 화면에서 문자가 보내지지는 않습니다.</p>'+
+    '<div class="smsbox">'+esc(EXT_REG_SMS)+'</div><p class="hint">'+smsBytes(EXT_REG_SMS)+'/90바이트 (단문)</p>'+
+    '<button class="btn" id="smsCopy">안내 문구 복사</button><p class="hint" id="smsMsg" aria-live="polite"></p></div>'+
     '<div class="card"><b>등록된 외부 이용자</b>'+(list||'<p class="hint">등록된 외부 이용자가 없습니다.</p>')+'</div>';
 }
 function bindExt(){
+  const sc=$("#smsCopy");if(sc)sc.onclick=async()=>{
+    const ok=await copyText(EXT_REG_SMS);
+    $("#smsMsg").textContent=ok?"복사되었습니다. 문자 앱에 붙여 넣어 보내십시오.":"자동 복사가 되지 않았습니다. 위 문구를 길게 눌러 직접 복사하십시오.";
+  };
   const xg=$("#xGo");if(xg)xg.onclick=()=>{
     const name=norm($("#xName").value.trim()),pw=$("#xPw").value,phone=fmtPhone($("#xPhone").value);
     const err=m=>{$("#xMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
