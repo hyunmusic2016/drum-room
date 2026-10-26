@@ -199,7 +199,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.13.4";
+const APP_VERSION="v0.13.5";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -794,7 +794,7 @@ function prodLine(q){
 function statusItem({u,i,q},kind){
   const col=u.type==="ext"?'--ext-text':'--stu-text';
   const line=kind==="none"?(q?'<div class="hint">지난 '+PROD[q.kind]+': '+q.end+' 만료</div>':''):'<div class="hint">'+prodLine(q)+'</div>';
-  return '<div class="item uitem" data-sv="'+i+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+
+  return '<div class="item uitem" data-sv="'+i+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+(kind!=="none"?'<span class="badge '+q.kind+'">'+PROD[q.kind]+'</span>':'')+
     '<div class="hint">'+esc(u.phone||"전화번호 없음")+(u.part?' · '+esc(u.part):'')+'</div>'+(u.memo?'<div class="hint">'+esc(u.memo)+'</div>':'')+line+'</div>'+
     '<div style="display:flex;gap:6px;flex:none;align-items:center"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+i+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
