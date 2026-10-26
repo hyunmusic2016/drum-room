@@ -62,6 +62,11 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
 .btn.ext{background:var(--ext-btn);color:#fff}
+.btn.call{background:#1e8e4e;color:#fff}
+a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.first{background:transparent;color:var(--ext-text);border:1.5px solid var(--ext-btn);margin-top:14px}
+.steps{padding-left:22px;margin:12px 0 4px}
+.steps li{margin:10px 0;font-size:15px;line-height:1.6}
 .sh-kind{font-size:15px;font-weight:700;margin:0 0 2px}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn.danger{background:var(--danger);color:#fff}
@@ -192,7 +197,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.2.4";
+const APP_VERSION="v0.3.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -243,6 +248,7 @@ function publicStatus(date){ // 공개 응답: 마스킹 이름만 (원본 이�
   return out;
 }
 const PHONE="010-7753-8730";
+const CONTACT_HOURS="매일 오전 9시 ~ 밤 10시"; // 문의 가능 시간(학원 운영에 맞게 수정)
 function findExt(name,pw){return db.externals.find(e=>norm(e.name)===norm(name)&&e.pw===pw)}
 function reserve(date,hour,name,pw,consent,mode){
   name=name.trim();
@@ -421,7 +427,7 @@ function renderBook(){
 function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
   $("#sheet").innerHTML=
    '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--accent-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
-   (EXT?'<div class="banner">처음 이용하시는 경우 <b>'+PHONE+'</b>으로 연락하시기 바랍니다.<a class="btn" href="tel:01077538730" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px">전화 연결 '+PHONE+'</a></div>':'')+
+   (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
    (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
    (admin?'':'<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
@@ -431,6 +437,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
    '<div id="rMsg"></div><button class="btn'+(EXT?' ext':'')+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
   if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
+  if(EXT)$("#firstGo").onclick=()=>openFirstGuide(h);
   if(admin){
     const t1=$("#rT1"),t2=$("#rT2");
     t1.onchange=()=>{if(t1.checked)t2.checked=false;else t1.checked=true};
@@ -459,6 +466,23 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     $("#sheet").classList.add("done");$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.pass?'<i class="badge">이용권</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
     burst();$("#ok").onclick=closeSheet;if(admin){renderProxy()}else{selHour=null;curDate=allowedDates()[0];renderBook()}
   };
+}
+/* 외부 이용자 '처음 오시는 분' 안내: 같은 창 안에서 보여 주고, 뒤로 가면 예약 입력으로 돌아갑니다. */
+function openFirstGuide(h){
+  $("#sheet").innerHTML=
+   '<div class="row" style="align-items:flex-start"><div><p class="sh-kind" style="color:var(--ext-text)">외부 이용자 예약하기</p><h2 style="margin:0">처음 오시는 분 안내</h2></div><button class="btn ghost small" id="backExt">← 뒤로</button></div>'+
+   '<p style="margin:14px 0 0">외부 이용자는 학원에 등록한 뒤 예약할 수 있습니다. 아래 순서대로 진행하십시오.</p>'+
+   '<ol class="steps">'+
+   '<li><b>학원에 전화하십시오.</b> 아래 버튼을 누르면 바로 연결됩니다.</li>'+
+   '<li><b>통화 중에 이름과 전화번호를 알려 주십시오.</b> 비밀번호는 연락하신 전화번호의 뒤 4자리로 등록됩니다.</li>'+
+   '<li><b>통화가 끝나면 등록된 이름과 비밀번호를 문자로 보내 드립니다.</b></li>'+
+   '<li><b>문자를 받으신 뒤</b> "외부 이용자 예약하기"에서 안내받은 이름과 비밀번호로 예약하십시오.</li>'+
+   '</ol>'+
+   '<p class="hint">원하시는 시간이 있으면 통화 중에 말씀해 주십시오. 첫 예약은 관리자가 대신 잡아 드릴 수 있습니다.</p>'+
+   '<div class="card" style="margin-top:14px"><span class="hint" style="margin:0">문의 가능 시간</span><div style="font-weight:700;font-size:17px">'+CONTACT_HOURS+'</div></div>'+
+   '<a class="btn call" href="tel:'+PHONE.replace(/\D/g,"")+'">전화 걸기 '+PHONE+'</a>';
+  $("#sheet").scrollTop=0;
+  $("#backExt").onclick=()=>openSheet(h,false,"ext");
 }
 function burst(){
   if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
