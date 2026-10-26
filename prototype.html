@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--ext-btn:#c2491a;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -61,6 +61,8 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline
 .hint{font-size:13px;color:var(--sub);margin:4px 0 0}
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
+.btn.ext{background:var(--ext-btn);color:#fff}
+.sh-kind{font-size:15px;font-weight:700;margin:0 0 2px}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn.danger{background:var(--danger);color:#fff}
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
@@ -189,7 +191,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.2.2";
+const APP_VERSION="v0.2.3";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -417,7 +419,7 @@ function renderBook(){
 
 function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
   $("#sheet").innerHTML=
-   '<div class="row"><h2 style="margin:0">'+(EXT?"외부 이용자 · ":"")+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' '+hourLabel(h)+'</h2>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
+   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--accent-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
    (EXT?'<div class="banner">처음 이용하시는 경우 <b>'+PHONE+'</b>으로 연락하시기 바랍니다.<a class="btn" href="tel:01077538730" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:10px">전화 연결 '+PHONE+'</a></div>':'')+
    (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
@@ -425,7 +427,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
    (admin?'':'<p class="hint">'+(EXT?'통화 시 등록하신 비밀번호 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
    (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(7일 후 삭제)에 동의합니다.</span></label>')+
-   '<div id="rMsg"></div><button class="btn" id="rGo">예약하기</button>';
+   '<div id="rMsg"></div><button class="btn'+(EXT?' ext':'')+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
   if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
   if(admin){
