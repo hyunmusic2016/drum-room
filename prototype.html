@@ -84,6 +84,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .sh-kind{font-size:15px;font-weight:700;margin:0 0 2px}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn.danger{background:var(--danger);color:#fff}
+.btn.edit{background:#f5c518;color:#3d2e00} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -199,7 +200,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.13.5";
+const APP_VERSION="v0.13.6";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -841,7 +842,7 @@ function userViewHtml(){
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
     '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
-    '<div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" id="vEdit" style="margin:0">수정</button><button class="btn danger" id="vDel" style="margin:0">삭제</button></div>'+
+    '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
     '<div style="margin-top:22px">'+histHtml(userReservations(u),db.passes.filter(x=>mineProd(u,x)&&x.end<t))+'</div></div>';
 }
 /* 이용권 충전(결정 사항 7): 남은 횟수에 추가 횟수를 더하고, 기간은 충전한 날부터 새로(기존 종료일이 더 늦으면 그대로).
@@ -881,14 +882,6 @@ function bindUserView(){
   const u=db.users[viewUser],c=curProd(u);
   if(c&&c.kind==="count")bindTopup(u,c);
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
-  $("#vDel").onclick=()=>{
-    const t=seoulDate(),live=db.passes.filter(q=>mineProd(u,q)&&q.end>=t);
-    if(!confirm(u.name+"님을 삭제하시겠습니까?"+(live.length?"\n사용 중이거나 시작 예정인 "+live.map(q=>PROD[q.kind]).join("·")+"도 함께 종료됩니다.":"")+"\n이미 확정된 예약은 그대로 유지됩니다."))return;
-    // 삭제한 사람의 상품이 남아 있으면 같은 이름·비밀번호로 다시 등록할 때 기간이 겹치고, 재원생은 삭제 후에도 정액권으로 예약할 수 있으므로 함께 종료합니다.
-    // 이미 시작한 상품은 어제로 종료(지난 상품 기록으로 남음), 아직 시작 전인 상품은 지웁니다.
-    live.forEach(q=>{if(q.start<t)q.end=addDays(t,-1);else db.passes.splice(db.passes.indexOf(q),1)});
-    db.users.splice(viewUser,1);db.log.push(nowSeoul()+" 이용자 삭제");viewUser=null;uFlash=u.name+"님을 삭제했습니다.";renderAdmin();
-  };
 }
 /* 이용자 수정(이용자 정보 + 정액권·이용권을 한 화면에서) */
 function userEditHtml(){
