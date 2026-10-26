@@ -160,14 +160,14 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
     <button class="btn ghost small" id="applyNow">이 시각으로 설정</button>
     <button class="btn ghost small" id="resetNow">실제 시각으로</button>
     <p class="hint" id="nowLabel"></p>
-    <p class="hint">샘플 이용권: 김이용 / 0000 · 관리자 비밀번호: 0000 (테스트 전용, 새로고침하면 초기화)</p>
+    <p class="hint">샘플 정액권(재원생, 하루 3회): 김정액 / 0000 · 샘플 이용권(외부 이용자, 총 10회): 김외부 / 0000 · 관리자 비밀번호: 0000 (테스트 전용, 새로고침하면 초기화)</p>
   </details>
 
   <section id="v-book">
     <div class="tabs" id="dayTabs" role="tablist"></div>
     <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span></div>
     <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
-    <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (이용권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
+    <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (정액권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
   </section>
 
   <section id="v-mine" class="hidden">
@@ -202,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.5.1";
+const APP_VERSION="v0.6.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -228,7 +228,11 @@ function hourLabel(h){return String(h).padStart(2,"0")+":00–"+String(h+1).padS
 const db={
   nextId:1,
   reservations:[],
-  passes:[{name:"김이용",pw:"0000",start:"2000-01-01",end:"2099-12-31",limit:3}],
+  /* 상품: target 재원생(stu)/외부 이용자(ext), kind 정액권(flat: 하루 limit회)/이용권(count: 기간 내 총 total회).
+     재원생은 정액권만 씁니다. 외부 이용자 상품의 비밀번호는 등록된 외부 이용자 비밀번호(전화번호 뒤 4자리)와 같습니다. */
+  nextPid:3,
+  passes:[{id:1,target:"stu",kind:"flat",name:"김정액",pw:"0000",start:"2000-01-01",end:"2099-12-31",limit:3,total:null},
+          {id:2,target:"ext",kind:"count",name:"김외부",pw:"0000",start:"2000-01-01",end:"2099-12-31",limit:null,total:10}],
   blocked:[], // {date,hour,reason}
   externals:[{name:"김외부",pw:"0000",phone:"010-0000-0000"}],
   admin:"0000",
@@ -237,18 +241,28 @@ const db={
 };
 function seed(){
   const t=seoulDate(),tm=addDays(t,1);
-  [[t,20,"홍길동","1111"],[t,21,"이서연","2222"],[tm,10,"김이용","0000"],[tm,11,"남궁민수","3333"]]
-  .forEach(([d,h,n,p])=>db.reservations.push({id:db.nextId++,date:d,hour:h,name:n,pw:p,status:"확정",pass:n==="김이용",reason:""}));
+  [[t,20,"홍길동","1111"],[t,21,"이서연","2222"],[tm,10,"김정액","0000"],[tm,11,"남궁민수","3333"]]
+  .forEach(([d,h,n,p])=>db.reservations.push({id:db.nextId++,date:d,hour:h,name:n,pw:p,status:"확정",prod:n==="김정액"?"flat":null,prodId:n==="김정액"?1:null,reason:""}));
   db.blocked.push({date:tm,hour:3,reason:"점검"});
-  db.passes[0].start=t;db.passes[0].end=addMonthsEnd(t,1);
+  db.passes.forEach(q=>{q.start=t;q.end=addMonthsEnd(t,1)});
 }
-function activePass(name,date){return db.passes.find(p=>norm(p.name)===norm(name)&&p.start<=date&&date<=p.end)}
+const PROD={flat:"정액권",count:"이용권"};
+/* 해당 날짜에 쓸 수 있는 상품. 외부 이용자는 이름+비밀번호로 찾고, 재원생은 이름으로 찾은 뒤 비밀번호를 따로 확인합니다. */
+function activeProd(target,name,date,pw){return db.passes.find(p=>p.target===target&&norm(p.name)===norm(name)&&(pw===undefined||p.pw===pw)&&p.start<=date&&date<=p.end)}
+function prodUsed(p,date){return db.reservations.filter(r=>r.prodId===p.id&&r.status==="확정"&&(!date||r.date===date)).length}
+function prodLeft(p,date){if(p.kind==="count")return Math.max(p.total-prodUsed(p),0);return p.limit?Math.max(p.limit-prodUsed(p,date),0):Infinity}
+function prodLeftText(p,date){
+  if(p.kind==="count")return "총 "+p.total+"회 중 "+prodLeft(p)+"회 남음";
+  if(!(p.start<=date&&date<=p.end))return "기간 아님";
+  return p.limit?prodLeft(p,date)+"회 남음":"무제한";
+}
+function prodFullMsg(p){return p.kind==="count"?"이용권 횟수("+p.total+"회)를 모두 사용했습니다. 관리자에게 문의하십시오.":"정액권 하루 이용 횟수("+p.limit+"회)를 모두 사용했습니다."}
 function publicStatus(date){ // 공개 응답: 마스킹 이름만 (원본 이름과 비밀번호는 포함하지 않음)
   const out=[];
   for(let h=0;h<24;h++){
     const r=db.reservations.find(x=>x.date===date&&x.hour===h&&x.status==="확정");
     const b=db.blocked.find(x=>x.date===date&&x.hour===h);
-    out.push({hour:h,past:ended(date,h),taken:!!r,masked:r?mask(r.name):null,pass:r?r.pass:false,ext:r?!!r.ext:false,blocked:!!b});
+    out.push({hour:h,past:ended(date,h),taken:!!r,masked:r?mask(r.name):null,prod:r?r.prod||null:null,ext:r?!!r.ext:false,blocked:!!b});
   }
   return out;
 }
@@ -275,22 +289,24 @@ function reserve(date,hour,name,pw,consent,mode){
   if(ended(date,hour))return {ok:false,msg:"이미 지난 시간입니다. 다른 시간을 선택하십시오.",refresh:true};
   if(db.blocked.some(b=>b.date===date&&b.hour===hour))return {ok:false,msg:"이용할 수 없는 시간입니다.",refresh:true};
   if(db.reservations.some(r=>r.date===date&&r.hour===hour&&r.status==="확정"))return {ok:false,msg:"다른 분이 방금 예약한 시간입니다. 다른 시간을 선택하십시오.",refresh:true};
-  const ps=ext?null:activePass(name,date);
-  let isPass=false;
+  let prod=null;
   if(mode==="adminExt"||mode==="adminStudent"){
-    /* 관리자 예약: 하루 횟수 제한, 등록 여부, 이용권 비밀번호 확인 없이 예약 */
-    isPass=!ext&&!!ps;
+    /* 관리자 예약: 하루 횟수 제한, 등록 여부, 상품 확인 없이 예약하며 상품 횟수도 쓰지 않습니다. */
   }else if(ext){
-    /* 외부 이용자: 하루 예약 횟수 제한 없음 */
-  }else if(ps){
-    if(ps.pw!==pw)return {ok:false,msg:"이용권 비밀번호가 일치하지 않습니다."};
-    isPass=true;
-    if(ps.limit&&db.reservations.filter(r=>r.date===date&&norm(r.name)===norm(name)&&r.status==="확정").length>=ps.limit)return {ok:false,msg:"이용권 하루 이용 횟수("+ps.limit+"회)를 모두 사용했습니다."};
+    /* 외부 이용자: 정액권·이용권이 있으면 그 횟수를 쓰고, 없으면 하루 예약 횟수 제한 없음 */
+    const ps=activeProd("ext",name,date,pw);
+    if(ps){if(prodLeft(ps,date)<=0)return {ok:false,msg:prodFullMsg(ps)};prod=ps}
   }else{
+    const ps=activeProd("stu",name,date); // 재원생은 정액권만
+    if(ps){
+      if(ps.pw!==pw)return {ok:false,msg:"정액권 비밀번호가 일치하지 않습니다."};
+      if(prodLeft(ps,date)<=0)return {ok:false,msg:prodFullMsg(ps)};
+      prod=ps;
+    }else
     if(db.reservations.some(r=>r.date===date&&norm(r.name)===norm(name)&&r.status==="확정"))
       return {ok:false,msg:"하루에 한 번만 예약할 수 있습니다. 해당 날짜에 이미 예약이 있습니다."};
   }
-  const rec={id:db.nextId++,date,hour,name:norm(name),pw,status:"확정",pass:isPass,ext,reason:""};
+  const rec={id:db.nextId++,date,hour,name:norm(name),pw,status:"확정",prod:prod?prod.kind:null,prodId:prod?prod.id:null,ext,reason:""};
   db.reservations.push(rec);
   db.log.push(nowSeoul()+" 예약 #"+rec.id);
   return {ok:true,rec};
@@ -330,10 +346,10 @@ function moveReservation(id,name,pw,nd,nh){
   if(db.blocked.some(b=>b.date===nd&&b.hour===nh))return {ok:false,msg:"이용할 수 없는 시간입니다."};
   if(db.reservations.some(x=>x.id!==r.id&&x.date===nd&&x.hour===nh&&x.status==="확정"))return {ok:false,msg:"다른 분이 방금 예약한 시간입니다. 다른 시간을 선택하십시오."};
   const others=db.reservations.filter(x=>x.id!==r.id&&x.date===nd&&norm(x.name)===norm(r.name)&&x.status==="확정").length;
-  if(r.pass){
-    const ps=activePass(r.name,nd);
-    if(!ps||ps.pw!==pw)return {ok:false,msg:"이용권 기간 밖의 날짜입니다."};
-    if(ps.limit&&others>=ps.limit)return {ok:false,msg:"이용권 하루 이용 횟수("+ps.limit+"회)를 초과합니다."};
+  if(r.prodId){ // 상품 예약: 상품 기간 안에서만 이동. 이용권은 횟수 변화 없음, 정액권은 옮길 날짜의 하루 횟수 확인
+    const ps=db.passes.find(p=>p.id===r.prodId);
+    if(!ps||!(ps.start<=nd&&nd<=ps.end))return {ok:false,msg:PROD[r.prod]+" 기간 밖의 날짜입니다."};
+    if(ps.kind==="flat"&&ps.limit&&db.reservations.filter(x=>x.id!==r.id&&x.prodId===ps.id&&x.date===nd&&x.status==="확정").length>=ps.limit)return {ok:false,msg:"정액권 하루 이용 횟수("+ps.limit+"회)를 초과합니다."};
   }else if(!r.ext&&others>=1)return {ok:false,msg:"하루에 한 번만 예약할 수 있습니다. 해당 날짜에 이미 예약이 있습니다."};
   const from=r.date+" "+r.hour;
   r.date=nd;r.hour=nh;
@@ -354,7 +370,7 @@ function openMoveSheet(id,name,pw){
         let cls="free",txt="선택",dis="";
         if(cur){cls="taken";txt="현재 예약";dis="disabled"}
         else if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-        else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+        else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
         else if(s.past){cls="past";txt="";dis="disabled"}
         return '<button class="slot '+cls+'" data-mh="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
       }).join("")+'</div>';
@@ -420,7 +436,7 @@ function renderBook(){
   const cells=publicStatus(curDate).map(s=>{
     let cls="free",txt="예약 가능",dis="";
     if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
     else if(s.past){cls="past";txt="";dis="disabled"}
     return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
   });
@@ -448,16 +464,17 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     t1.onchange=()=>{if(t1.checked)t2.checked=false;else t1.checked=true};
     t2.onchange=()=>{if(t2.checked)t1.checked=false;else t2.checked=true};
   }
-  $("#rName").oninput=()=>{
-    const n=$("#rName").value.trim(),p=(n&&!EXT)?activePass(n,D):null;
+  const badge=()=>{ // 이름과 비밀번호가 모두 맞을 때만 상품 정보를 보여 줍니다.
+    const n=$("#rName").value.trim(),pw=$("#rPw").value;
+    const p=(!admin&&n&&/^\d{4}$/.test(pw))?(EXT?activeProd("ext",n,D,pw):activeProd("stu",n,D,pw)):null;
     if(!p){$("#rBadge").innerHTML="";return}
     const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
     const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=p.end.split("-").map(Number);
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
-    const used=db.reservations.filter(r=>r.date===D&&norm(r.name)===norm(n)&&r.status==="확정").length;
-    const remain=p.limit?Math.max(p.limit-used,0)+"회 남음":"무제한";
-    $("#rBadge").innerHTML='<i class="badge">이용권 회원</i><b style="font-size:13px;margin-left:6px;color:var(--stu-text)">'+(D===allowedDates()[0]?"오늘":"내일")+' 이용 '+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
+    const remain=p.kind==="count"?prodLeftText(p,D):(D===allowedDates()[0]?"오늘":"내일")+" 이용 "+prodLeftText(p,D);
+    $("#rBadge").innerHTML='<i class="badge">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
   };
+  $("#rName").oninput=badge;$("#rPw").oninput=badge;
   let busy=false;
   $("#rGo").onclick=()=>{
     if(busy)return;busy=true;$("#rGo").disabled=true;
@@ -468,7 +485,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
       if(r.refresh){admin?renderProxy():renderBook()}
       return;
     }
-    const kind=doneKind(r.rec.ext);$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.pass?'<i class="badge">이용권</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
+    const kind=doneKind(r.rec.ext);$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.prod?'<i class="badge">'+PROD[r.rec.prod]+'</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
     burst(kind);$("#ok").onclick=closeSheet;if(admin){renderProxy()}else{selHour=null;curDate=allowedDates()[0];renderBook()}
   };
 }
@@ -516,13 +533,13 @@ $("#mFind").onclick=()=>{
     const P=r.pass,dts=allowedDates();
     const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=P.end.split("-").map(Number);
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
-    const rem=d=>{if(!(P.start<=d&&d<=P.end))return "이용권 기간 아님";if(!P.limit)return "무제한";const u=db.reservations.filter(x=>x.date===d&&norm(x.name)===norm(P.name)&&x.status==="확정").length;return Math.max(P.limit-u,0)+"회 남음"};
-    h+='<div class="card"><b>이용권 회원</b><span class="badge">이용권</span>'+
-      '<div style="margin-top:8px;font-weight:700;color:var(--stu-text)">오늘 이용 '+rem(dts[0])+'<br>내일 이용 '+rem(dts[1])+'</div>'+
+    const col=P.target==="ext"?"--ext-text":"--stu-text";
+    h+='<div class="card"><b>'+PROD[P.kind]+' 회원</b><span class="badge">'+PROD[P.kind]+'</span>'+
+      '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
   }
   if(!r.list.length)h+='<div class="msg ok">예약 내역이 없습니다.</div>';
-  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.pass?'<span class="badge">이용권</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
+  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
   $("#mOut").innerHTML='<div class="card">'+h+'</div>';
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m,name,pw));
   document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
@@ -550,28 +567,41 @@ function limRead(p){
   if(!Number.isInteger(n)||n<0||n>24)return {ok:false,msg:"하루 이용 횟수를 선택하십시오."};
   return {ok:true,limit:n||null};
 }
-function addPass(name,pw,start,months,limit){
+function totCtl(p,total){
+  const opts=[5,10,15,20,25,30,40,50].map(n=>'<option value="'+n+'"'+(total===n?' selected':'')+'>'+n+'회</option>').join("");
+  const extra=total&&![5,10,15,20,25,30,40,50].includes(total)?'<option value="'+total+'" selected>'+total+'회</option>':'';
+  return '<label for="'+p+'Tot">총 이용 횟수</label><select id="'+p+'Tot" style="width:100%">'+extra+opts+'</select>';
+}
+function qtyCtl(p,kind,v){return kind==="count"?totCtl(p,v||10):limCtl(p,v===undefined?5:v)}
+function tgtLabel(t){return t==="ext"?"외부 이용자":"재원생"}
+function prodBadges(q){return '<span class="badge" style="color:var('+(q.target==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(q.target)+'</span><span class="badge">'+PROD[q.kind]+'</span>'}
+function addProd(target,kind,name,pw,start,months,limit,total){
   name=norm(name.trim());
+  if(target==="stu"&&kind!=="flat")return {ok:false,msg:"재원생은 정액권만 등록할 수 있습니다."};
   if(!validName(name))return {ok:false,msg:"이름을 한글 2~5자 또는 영문으로 입력하십시오."};
   if(!/^\d{4}$/.test(pw))return {ok:false,msg:"비밀번호는 숫자 4자리입니다."};
+  if(target==="ext"&&!findExt(name,pw))return {ok:false,msg:"등록된 외부 이용자(이름·비밀번호)와 일치하지 않습니다. 외부 이용자 탭에서 먼저 등록하십시오."};
   if(!start||!(months>=1))return {ok:false,msg:"시작일과 기간을 확인하십시오."};
-  if(db.passes.some(p=>norm(p.name)===name&&p.end>=start))return {ok:false,msg:"이미 유효한 이용권이 있습니다. 기간을 연장하십시오."};
-  db.passes.push({name,pw,start,end:addMonthsEnd(start,months),limit:limit||null});db.log.push(nowSeoul()+" 이용권 등록");return {ok:true};
+  if(db.passes.some(q=>q.target===target&&norm(q.name)===name&&(target!=="ext"||q.pw===pw)&&q.end>=start))return {ok:false,msg:"이미 유효한 상품이 있습니다. 수정 화면에서 기간을 연장하십시오."};
+  db.passes.push({id:db.nextPid++,target,kind,name,pw,start,end:addMonthsEnd(start,months),limit:kind==="flat"?(limit||null):null,total:kind==="count"?total:null});
+  db.log.push(nowSeoul()+" "+PROD[kind]+" 등록");return {ok:true};
 }
 let editPass=null;
 function isEditing(){return editPass!==null&&!!db.passes[editPass]}
 function editHtml(){
-  const p=db.passes[editPass];
-  /* 칸 배치는 이용권 등록과 같습니다. 기간은 개월 수 대신 종료일로 직접 고칩니다. */
-  return '<div class="card"><b>이용권 수정</b>'+
+  const p=db.passes[editPass],L=PROD[p.kind];
+  /* 칸 배치는 등록과 같습니다. 기간은 개월 수 대신 종료일로 직접 고칩니다. 대상과 종류는 바꿀 수 없습니다. */
+  return '<div class="card"><b>'+L+' 수정</b><div style="margin-top:6px">'+prodBadges(p)+'</div>'+
     '<div class="cols c2"><div><label for="eName">이름</label><input type="text" id="eName" autocomplete="off" value="'+esc(p.name)+'"></div><div><label for="ePw">새 비밀번호 4자리</label><input type="password" id="ePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="비우면 유지"></div></div>'+
-    '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'"></div><div>'+limCtl("e",p.limit)+'</div></div>'+
+    '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'"></div><div>'+qtyCtl("e",p.kind,p.kind==="count"?p.total:p.limit)+'</div></div>'+
     '<div class="row" style="margin-top:8px"><p class="hint" id="eDays" style="margin:0"></p><button class="btn ghost small" id="eExt">1개월 연장</button></div>'+
-    '<p class="hint" id="eExtMsg"></p><p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button>'+
-    '<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:4px"><button class="btn danger" id="eStop">이용권 종료</button><p class="hint">종료하면 오늘부터 이 이용권으로 예약할 수 없습니다. 이미 확정된 예약은 그대로 유지됩니다.</p></div></div>';
+    (p.kind==="count"?'<p class="hint">지금까지 '+prodUsed(p)+'회 사용했습니다(취소된 예약 제외).</p>':'')+
+    '<p class="hint" id="eExtMsg"></p><p class="hint">이름이나 비밀번호를 변경하면, 이 '+L+'으로 예약한 확정 예약에도 동일하게 적용됩니다.'+(p.target==="ext"?' 외부 이용자 정보(이름·비밀번호)와 같게 유지하십시오.':'')+'</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button>'+
+    '<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:4px"><button class="btn danger" id="eStop">'+L+' 종료</button><p class="hint">종료하면 오늘부터 이 '+L+'으로 예약할 수 없습니다. 이미 확정된 예약은 그대로 유지됩니다.</p></div></div>';
 }
 function bindEdit(){
-  $("#eBack").onclick=()=>{editPass=null;renderAdmin()};limBind("e");
+  const p0=db.passes[editPass],L=PROD[p0.kind];
+  $("#eBack").onclick=()=>{editPass=null;renderAdmin()};
   const upd=()=>{const s=$("#eStart").value,e=$("#eEnd").value;
     $("#eDays").textContent=s&&e&&s<=e?"이용 기간: "+(Math.round((Date.parse(e)-Date.parse(s))/864e5)+1)+"일":""};
   $("#eStart").oninput=upd;$("#eEnd").oninput=upd;upd();
@@ -581,40 +611,57 @@ function bindEdit(){
     upd();$("#eExtMsg").textContent="종료일을 "+$("#eEnd").value+"(으)로 바꿨습니다. 저장을 눌러야 반영됩니다.";
   };
   $("#eStop").onclick=()=>{
-    if(!confirm("이 이용권을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
-    db.passes[editPass].end=addDays(seoulDate(),-1);db.log.push(nowSeoul()+" 이용권 종료");
+    if(!confirm("이 "+L+"을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
+    db.passes[editPass].end=addDays(seoulDate(),-1);db.log.push(nowSeoul()+" "+L+" 종료");
     editPass=null;renderAdmin();
   };
   $("#eSave").onclick=()=>{
-    const p=db.passes[editPass],old=norm(p.name);
+    const p=db.passes[editPass];
     const name=norm($("#eName").value.trim()),pw=$("#ePw").value,s=$("#eStart").value,e=$("#eEnd").value;
     const err=m=>{$("#eMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
     if(!validName(name)){err("이름을 한글 2~5자 또는 영문으로 입력하십시오.");return}
     if(pw&&!/^\d{4}$/.test(pw)){err("비밀번호는 숫자 4자리입니다.");return}
-    const lm=limRead("e");if(!lm.ok){err(lm.msg);return}
+    let limit=null,total=null;
+    if(p.kind==="count"){total=Number($("#eTot").value);const u=prodUsed(p);if(total<u){err("이미 "+u+"회 사용했습니다. 총 이용 횟수는 "+u+"회 이상이어야 합니다.");return}}
+    else{const lm=limRead("e");if(!lm.ok){err(lm.msg);return}limit=lm.limit}
     if(!s||!e||s>e){err("시작일과 종료일을 확인하십시오. 종료일은 시작일과 같거나 이후여야 합니다.");return}
-    if(db.passes.some((q,i)=>i!==editPass&&norm(q.name)===name&&q.start<=e&&q.end>=s)){err("같은 이름의 다른 이용권과 기간이 겹칩니다.");return}
-    db.reservations.forEach(r=>{if(r.pass&&r.status==="확정"&&norm(r.name)===old){r.name=name;if(pw)r.pw=pw}});
+    const npw=pw||p.pw;
+    if(db.passes.some((q,i)=>i!==editPass&&q.target===p.target&&norm(q.name)===name&&(p.target!=="ext"||q.pw===npw)&&q.start<=e&&q.end>=s)){err("같은 사람의 다른 상품과 기간이 겹칩니다.");return}
+    db.reservations.forEach(r=>{if(r.prodId===p.id&&r.status==="확정"){r.name=name;if(pw)r.pw=pw}});
     p.name=name;if(pw){p.pw=pw;db.fails[name]={n:0,until:""}}
-    p.start=s;p.end=e;p.limit=lm.limit;db.log.push(nowSeoul()+" 이용권 수정");
+    p.start=s;p.end=e;p.limit=limit;p.total=total;db.log.push(nowSeoul()+" "+L+" 수정");
     editPass=null;renderAdmin();
   };
 }
 function passCardHtml(){
   if(isEditing())return editHtml();
   const t=seoulDate();
-  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pm="'+i+'">수정</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
-  return '<div class="card"><b>이용권 등록</b>'+
-    '<div class="cols c2"><div><label for="gName">이름</label><input type="text" id="gName" autocomplete="off"></div><div><label for="gPw">이용권 비밀번호 4자리</label><input type="password" id="gPw" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
-    '<div class="cols c3"><div><label for="gStart">시작일</label><input type="date" id="gStart" value="'+t+'"></div><div><label for="gMon">기간 (개월)</label><input type="number" id="gMon" min="1" max="12" value="1"></div><div>'+limCtl("g",5)+'</div></div>'+
-    '<p class="hint" id="gEnd"></p><div id="gMsg"></div><button class="btn" id="gGo">이용권 등록</button></div>'+
-    '<div class="card"><b>등록된 이용권</b>'+(list||'<p class="hint">등록된 이용권이 없습니다.</p>')+'</div>';
+  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b>'+prodBadges(p)+'<div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · '+(p.kind==="count"?'총 '+p.total+'회 · 남은 '+prodLeft(p)+'회':'하루 '+(p.limit?p.limit+'회':'무제한'))+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pm="'+i+'">수정</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
+  return '<div class="card"><b>정액권·이용권 등록</b>'+
+    '<p class="hint">정액권: 기간 동안 하루 정해진 횟수까지(매일 다시 채워짐). 이용권: 기간 동안 총 정해진 횟수까지(외부 이용자 전용).</p>'+
+    '<div class="cols c2"><div><label for="gTgt">대상</label><select id="gTgt" style="width:100%"><option value="stu">재원생</option><option value="ext">외부 이용자</option></select></div><div><label for="gKind">종류</label><select id="gKind" style="width:100%"><option value="flat">정액권</option><option value="count">이용권</option></select></div></div>'+
+    '<div class="cols c2"><div><label for="gName">이름</label><input type="text" id="gName" autocomplete="off"></div><div><label for="gPw">비밀번호 4자리</label><input type="password" id="gPw" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
+    '<p class="hint" id="gPwHint"></p>'+
+    '<div class="cols c3"><div><label for="gStart">시작일</label><input type="date" id="gStart" value="'+t+'"></div><div><label for="gMon">기간 (개월)</label><input type="number" id="gMon" min="1" max="12" value="1"></div><div id="gQty">'+qtyCtl("g","flat")+'</div></div>'+
+    '<p class="hint" id="gEnd"></p><div id="gMsg"></div><button class="btn" id="gGo">등록</button></div>'+
+    '<div class="card"><b>등록된 정액권·이용권</b>'+(list||'<p class="hint">등록된 상품이 없습니다.</p>')+'</div>';
 }
 function bindPass(){
   if(isEditing()){bindEdit();return}
   const upd=()=>{const s=$("#gStart").value,m=+$("#gMon").value;$("#gEnd").textContent=s&&m>0?"종료일: "+addMonthsEnd(s,m):""};
-  $("#gStart").oninput=upd;$("#gMon").oninput=upd;upd();limBind("g");
-  $("#gGo").onclick=()=>{const lm=limRead("g");if(!lm.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(lm.msg)+'</div>';return}const r=addPass($("#gName").value,$("#gPw").value,$("#gStart").value,+$("#gMon").value,lm.limit);if(!r.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}renderAdmin()};
+  $("#gStart").oninput=upd;$("#gMon").oninput=upd;upd();
+  const kindUpd=()=>{ // 재원생은 정액권만. 종류에 따라 하루 횟수/총 횟수 칸을 바꿉니다.
+    const ext=$("#gTgt").value==="ext",ko=$("#gKind");
+    ko.querySelector('option[value="count"]').disabled=!ext;if(!ext)ko.value="flat";
+    if($("#gQty").dataset.k!==ko.value){$("#gQty").innerHTML=qtyCtl("g",ko.value);$("#gQty").dataset.k=ko.value}
+    $("#gPwHint").textContent=ext?"외부 이용자는 등록된 외부 이용자와 같은 이름·비밀번호(연락하신 전화번호 뒤 4자리)로 등록하십시오.":"재원생이 예약할 때 입력할 정액권 비밀번호입니다.";
+  };
+  $("#gQty").dataset.k="flat";$("#gTgt").onchange=kindUpd;$("#gKind").onchange=kindUpd;kindUpd();
+  $("#gGo").onclick=()=>{
+    const kind=$("#gKind").value;let limit=null,total=null;
+    if(kind==="count")total=Number($("#gTot").value);else{const lm=limRead("g");if(!lm.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(lm.msg)+'</div>';return}limit=lm.limit}
+    const r=addProd($("#gTgt").value,kind,$("#gName").value,$("#gPw").value,$("#gStart").value,+$("#gMon").value,limit,total);
+    if(!r.ok){$("#gMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}renderAdmin()};
   document.querySelectorAll("[data-pm]").forEach(b=>b.onclick=()=>{editPass=+b.dataset.pm;renderAdmin()});
 }
 function setHtml(){return '<div class="card"><b>관리자 비밀번호 변경</b><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="off"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="off"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="off"><p class="hint">실제 서비스에서는 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
@@ -739,6 +786,7 @@ function bindExt(){
     if(pw&&!/^\d{4}$/.test(pw)){err("비밀번호는 숫자 4자리입니다.");return}
     if(db.externals.some((x,i)=>i!==editExt&&norm(x.name)===name&&x.pw===(pw||e.pw))){err("같은 이름과 비밀번호로 등록된 외부 이용자가 이미 있습니다. 다른 비밀번호를 사용하십시오.");return}
     db.reservations.forEach(r=>{if(r.ext&&r.status==="확정"&&norm(r.name)===old&&r.pw===oldPw){r.name=name;if(pw)r.pw=pw}});
+    db.passes.forEach(q=>{if(q.target==="ext"&&norm(q.name)===old&&q.pw===oldPw){q.name=name;if(pw)q.pw=pw}});
     e.name=name;e.phone=phone;e.memo=$("#eeMemo").value.trim();if(pw)e.pw=pw;
     db.fails["ext:"+old]={n:0,until:""};db.fails["ext:"+name]={n:0,until:""};
     db.log.push(nowSeoul()+" 외부 이용자 수정");
@@ -756,7 +804,7 @@ function settingsHtml(){
   if(setPage==="pass")return back+passCardHtml();
   if(setPage==="pw")return back+setHtml();
   if(setPage==="proxy")return back+proxyHtml();
-  return '<div class="card"><b>설정</b><div class="item"><button data-sp="pass" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">이용권</button></div><div class="item"><button data-sp="proxy" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 예약</button></div><div class="item"><button data-sp="block" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">이용 불가 시간 설정</button></div><div class="item"><button data-sp="pw" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 비밀번호 변경</button></div></div>';
+  return '<div class="card"><b>설정</b><div class="item"><button data-sp="pass" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">정액권·이용권</button></div><div class="item"><button data-sp="proxy" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 예약</button></div><div class="item"><button data-sp="block" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">이용 불가 시간 설정</button></div><div class="item"><button data-sp="pw" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">관리자 비밀번호 변경</button></div></div>';
 }
 function bindSettings(){
   document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin()});
@@ -783,7 +831,7 @@ function renderProxy(){
     const r=db.reservations.find(x=>x.date===curDateA&&x.hour===s.hour&&x.status==="확정");
     let cls="free",txt="예약 가능",dis="";
     if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(r.name)+(s.pass?'<i class="badge">이용권</i>':"");dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(r.name)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
     else if(s.past){cls="past";txt="";dis="disabled"}
     return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
   });
@@ -794,7 +842,7 @@ function renderAdmin(){
   const rows=[...db.reservations].sort((a,b)=>slotStart(a.date,a.hour).localeCompare(slotStart(b.date,b.hour)));
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div><div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
-   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.pass?'<span class="badge">이용권</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
+   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge">'+PROD[r.prod]+'</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
    '</div></div>'+
    '</div><div id="sec-ext">'+extHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
