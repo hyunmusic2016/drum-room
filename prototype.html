@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#c2491a;--ext-btn:#c2491a;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#a8401c;--ext-btn:#FF774C;--ext-ink:#3b1408;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#ff9a6b;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#FF774C;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#ff9a6b;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#FF774C;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -61,7 +61,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .hint{font-size:13px;color:var(--sub);margin:4px 0 0}
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
-.btn.ext{background:var(--ext-btn);color:#fff}
+.btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
@@ -198,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.0";
+const APP_VERSION="v0.4.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
