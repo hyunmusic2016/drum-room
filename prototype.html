@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#603C2B;--ext-btn:#603C2B;--ext-line:#603C2B;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#9C5238;--ext-btn:#9C5238;--ext-line:#9C5238;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#d9a78f;--ext-line:#d9a78f;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#d9a78f;--ext-line:#d9a78f;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -198,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.2";
+const APP_VERSION="v0.4.3";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
