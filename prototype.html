@@ -202,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.12.2";
+const APP_VERSION="v0.13.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -542,7 +542,7 @@ function histHtml(resList,oldProds){
   const st=x=>x.status==="취소"?'<span class="status-cancel">취소</span>'+(x.reason?' · '+esc(x.reason):''):(ended(x.date,x.hour)?'이용 시간 지남':'예약 확정');
   const rItems=rs.map(x=>'<div class="item"><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':'')+'<div class="hint">'+st(x)+'</div></div>').join("");
   const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
-  const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+prodUsed(q)+'회 사용':'하루 '+(q.limit?q.limit+'회':'무제한'))+' · 만료</div></div>').join("");
+  const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+prodUsed(q)+'회 사용'+(q.topups&&q.topups.length?'(충전 '+q.topups.length+'번 포함)':''):'하루 '+(q.limit?q.limit+'회':'무제한'))+' · 만료</div></div>').join("");
   return '<p class="hint" style="margin-top:14px">예약 기록과 지난 정액권·이용권은 '+KEEP_MONTHS+'개월 동안 보관된 뒤 삭제됩니다.</p>'+
     '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
     '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
@@ -843,7 +843,8 @@ function userViewHtml(){
       kv("남은 기간",c.start>t?"시작 예정":(left>0?left+"일 남음":"오늘까지"))+
       (c.kind==="count"
         ?kv("총 이용 횟수",c.total+"회")+kv("사용한 횟수",prodUsed(c)+"회")+kv("남은 횟수",prodLeft(c)+"회")
-        :kv("하루 이용 횟수",c.limit?c.limit+"회":"무제한")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>';
+        :kv("하루 이용 횟수",c.limit?c.limit+"회":"무제한")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>'+
+      (c.kind==="count"?topupHtml(c):'');
   }else{
     prod='<p class="hint" style="margin:0">사용 중인 정액권·이용권이 없습니다.</p>'+(q?'<p class="hint">지난 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+' 만료</p>':'');
   }
@@ -855,8 +856,42 @@ function userViewHtml(){
     '<div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" id="vEdit" style="margin:0">수정</button><button class="btn danger" id="vDel" style="margin:0">삭제</button></div>'+
     '<div style="margin-top:22px">'+histHtml(userReservations(u),db.passes.filter(x=>mineProd(u,x)&&x.end<t))+'</div></div>';
 }
+/* 이용권 충전(결정 사항 7): 남은 횟수에 추가 횟수를 더하고, 기간은 충전한 날부터 새로(기존 종료일이 더 늦으면 그대로).
+   같은 이용권에 더하므로 이미 잡힌 예약과 사용 횟수가 그대로 이어집니다. 충전 기록은 topups에 남깁니다. */
+function topupEnd(c,days){const b=c.start>seoulDate()?c.start:seoulDate(),e=periodEnd(b,days);return e>c.end?e:c.end}
+function topupHtml(c){
+  const tu=c.topups||[];
+  return (tu.length?'<div class="kv"><span>충전 기록</span><b>'+tu.map(x=>x.date+' +'+x.add+'회 ('+x.days+'일)').join('<br>')+'</b></div>':'')+
+    '<button class="btn ghost" id="vTop" style="margin-top:12px">이용권 충전</button>'+
+    '<div id="vTopBox" class="hidden" style="border:1px solid var(--line);border-radius:12px;padding:4px 12px 12px;margin-top:8px">'+
+    '<div class="cols c2"><div>'+numInput("tAdd","추가 횟수","",999)+'</div><div><label for="tDays">기간 (일)</label><input type="text" id="tDays" inputmode="numeric" maxlength="3" autocomplete="off" value="'+PERIOD_DAYS+'"></div></div>'+
+    '<p class="hint" id="tPrev"></p><div id="tMsg"></div>'+
+    '<div style="display:flex;gap:8px"><button class="btn" id="tGo" style="margin:0">충전</button><button class="btn ghost" id="tCancel" style="margin:0">취소</button></div></div>';
+}
+function bindTopup(u,c){
+  const box=$("#vTopBox"),prev=()=>{
+    const a=$("#tAdd").value.trim(),d=daysVal("tDays"),n=/^\d+$/.test(a)?+a:0;
+    $("#tPrev").textContent=n&&d?"충전 후: 남은 "+(prodLeft(c)+n)+"회 · "+c.start+" ~ "+topupEnd(c,d):"추가 횟수와 기간을 입력하면 충전 후 결과가 표시됩니다.";
+  };
+  $("#vTop").onclick=()=>{box.classList.remove("hidden");$("#vTop").classList.add("hidden");prev();$("#tAdd").focus()};
+  $("#tCancel").onclick=()=>{box.classList.add("hidden");$("#vTop").classList.remove("hidden");$("#tAdd").value="";$("#tDays").value=PERIOD_DAYS;$("#tMsg").innerHTML=""};
+  $("#tAdd").oninput=prev;$("#tDays").oninput=prev;
+  $("#tGo").onclick=()=>{
+    const err=m=>{$("#tMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    const r=readNum("tAdd",999,"추가 횟수");if(!r.ok){err(r.msg);return}
+    const d=daysVal("tDays");if(!d){err("기간(일)을 1 이상의 숫자로 입력하십시오.");return}
+    if(c.total+r.n>999){err("총 이용 횟수는 999회를 넘을 수 없습니다. 지금 총 "+c.total+"회입니다.");return}
+    const e=topupEnd(c,d);
+    if(db.passes.some(q=>q!==c&&mineProd(u,q)&&q.start<=e&&q.end>=c.start)){err("충전 후 기간이 이 이용자의 다른 상품과 겹칩니다.");return}
+    if(!confirm("이용권을 "+r.n+"회 충전하시겠습니까?\n충전 후: 남은 "+(prodLeft(c)+r.n)+"회 · "+c.start+" ~ "+e))return;
+    c.total+=r.n;c.end=e;(c.topups=c.topups||[]).push({date:seoulDate(),add:r.n,days:d});
+    db.log.push(nowSeoul()+" 이용권 충전 +"+r.n+"회");
+    renderAdmin();showUserDone("충전하였습니다",u);
+  };
+}
 function bindUserView(){
-  const u=db.users[viewUser];
+  const u=db.users[viewUser],c=curProd(u);
+  if(c&&c.kind==="count")bindTopup(u,c);
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
   $("#vDel").onclick=()=>{
     if(!confirm(u.name+"님을 삭제하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
