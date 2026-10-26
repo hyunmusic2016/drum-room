@@ -64,6 +64,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
+.btn.sms{background:transparent;color:#1e8e4e;border:1.5px solid #1e8e4e}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.first{background:transparent;color:var(--ext-text);border:1.5px solid var(--ext-line);margin-top:14px}
 .steps{padding-left:22px;margin:12px 0 4px}
@@ -201,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.7";
+const APP_VERSION="v0.5.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -674,6 +675,13 @@ function bindBlock2(){
     renderAdmin();
   });
 }
+/* 외부 이용자 안내 문자(단문 SMS 90바이트 이하). 한글 등은 2바이트, 영문·숫자·기호·줄바꿈은 1바이트로 셉니다. */
+function smsBytes(t){let n=0;for(const ch of t)n+=ch.charCodeAt(0)<128?1:2;return n}
+function extSmsText(e){
+  const head="이름:"+e.name+"\n비밀번호:"+e.pw+"\n";
+  const long=head+"외부 이용자 예약하기를 눌러 위 정보로 예약하십시오.";
+  return smsBytes(long)<=90?long:head+"외부 이용자 예약하기에서 예약하십시오.";
+}
 function fmtPhone(v){
   const d=String(v||"").replace(/\D/g,"");
   if(!/^01\d{8,9}$/.test(d))return null;
@@ -689,7 +697,7 @@ function extHtml(){
       '<label for="eeMemo">메모 (선택)</label><input type="text" id="eeMemo" maxlength="100" autocomplete="off" value="'+esc(e.memo||"")+'">'+
       '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약에도 동일하게 적용됩니다.</p><div id="eeMsg"></div><button class="btn" id="eeSave">저장</button><button class="btn ghost" id="eeBack">수정 취소</button></div>';
   }
-  const list=db.externals.map((e,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(e.name)+'</b><div class="hint">'+esc(e.phone||"전화번호 없음")+'</div>'+(e.memo?'<div class="hint">'+esc(e.memo)+'</div>':"")+'</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" style="background:#1e8e4e;color:#fff" data-xc="'+i+'"'+(e.phone?'':' disabled')+'>통화</button><button class="btn ghost small" data-xm="'+i+'">수정</button><button class="btn danger small" data-xd="'+i+'">삭제</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
+  const list=db.externals.map((e,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(e.name)+'</b><div class="hint">'+esc(e.phone||"전화번호 없음")+'</div>'+(e.memo?'<div class="hint">'+esc(e.memo)+'</div>':"")+'</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" style="background:#1e8e4e;color:#fff" data-xc="'+i+'"'+(e.phone?'':' disabled')+'>통화</button><button class="btn sms small" data-xs="'+i+'"'+(e.phone?'':' disabled')+'>문자</button><button class="btn ghost small" data-xm="'+i+'">수정</button><button class="btn danger small" data-xd="'+i+'">삭제</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
   return '<div class="card"><b>외부 이용자 등록</b>'+
     '<div class="cols c2"><div><label for="xName">이름 (본명) <span class="req" aria-hidden="true">*</span></label><input type="text" id="xName" aria-required="true" autocomplete="off"></div><div><label for="xPw">비밀번호 4자리 <span class="req" aria-hidden="true">*</span></label><input type="password" id="xPw" aria-required="true" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
     '<label for="xPhone">전화번호 <span class="req" aria-hidden="true">*</span></label><input type="tel" id="xPhone" aria-required="true" inputmode="tel" autocomplete="off" placeholder="010-0000-0000">'+
@@ -707,6 +715,14 @@ function bindExt(){
     if(db.externals.some(e=>norm(e.name)===name&&e.pw===pw)){err("같은 이름과 비밀번호로 등록된 외부 이용자가 이미 있습니다. 다른 비밀번호를 사용하십시오.");return}
     db.externals.push({name,pw,phone,memo:$("#xMemo").value.trim()});db.log.push(nowSeoul()+" 외부 이용자 등록");renderAdmin();
   };
+  document.querySelectorAll("[data-xs]").forEach(b=>b.onclick=()=>{
+    const e=db.externals[+b.dataset.xs];
+    if(!e||!e.phone)return;
+    const txt=extSmsText(e),n=smsBytes(txt);
+    if(!confirm(e.name+"님("+e.phone+")에게 아래 문자를 보내시겠습니까?\n휴대폰 문자 앱이 열리면 전송을 눌러 주십시오.\n\n"+txt+"\n\n("+n+"/90바이트)"))return;
+    const ios=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const a=document.createElement("a");a.href="sms:"+e.phone.replace(/\D/g,"")+(ios?"&":"?")+"body="+encodeURIComponent(txt);a.target="_top";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+  });
   document.querySelectorAll("[data-xc]").forEach(b=>b.onclick=()=>{
     const e=db.externals[+b.dataset.xc];
     if(!e||!e.phone)return;
