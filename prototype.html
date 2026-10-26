@@ -205,7 +205,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.9.0";
+const APP_VERSION="v0.9.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -513,6 +513,17 @@ function openFirstGuide(h){
   $("#backExt").onclick=()=>openSheet(h,false,"ext");
 }
 /* 예약 완료 화면을 재원생(청록)·외부 이용자(테라코타) 색으로 표시합니다. */
+/* 이용자 등록·수정 완료 화면(예약 확정 화면과 같은 효과, 재원생 청록 / 외부 이용자 테라코타) */
+function showUserDone(title,u){
+  const kind=doneKind(u.type==="ext"),col=u.type==="ext"?'--ext-text':'--stu-text',q=curProd(u);
+  $("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2>'+
+    '<div class="card"><div style="font-size:22px;font-weight:900;color:var('+col+')">'+esc(u.name)+'</div>'+
+    '<div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span></div>'+
+    '<div class="hint">'+esc(u.phone||"")+(u.part?' · '+esc(u.part):'')+'</div>'+
+    (q?'<div style="margin-top:6px;font-size:14px"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> '+prodLine(q)+'</div>':'')+'</div>'+
+    '<button class="btn" id="ok">확인</button>';
+  $("#bg").classList.add("open");burst(kind);$("#ok").onclick=closeSheet;$("#ok").focus();
+}
 function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.add("done",k);return k}
 const CONFETTI={stu:["#0e9194","#5fd4d6","#0a6f72","#9fe3e4"],ext:["#9C5238","#e0a48c","#c27a5c","#f2c9b4"]};
 function burst(kind){
@@ -750,7 +761,7 @@ function bindUser(){
       if(!r.ok){db.users.pop();err(r.msg);return} // 상품 등록이 안 되면 이용자 등록도 취소
     }
     db.log.push(nowSeoul()+" 이용자 등록");
-    uFlash=f.name+"님을 "+(type==="ext"?"외부 이용자로":"재원생으로")+" 등록했습니다."+(kind!=="none"?" ("+PROD[kind]+" 포함)":"");renderAdmin();
+    uFlash="";renderAdmin();showUserDone("등록하였습니다",db.users[db.users.length-1]);
   };
 }
 /* ===== 설정 > 이용자 현황: 정액권 / 이용권 / 일반(상품 없음) =====
@@ -858,7 +869,7 @@ function bindUserEdit(){
     if(plan&&plan.edit){c.start=plan.s;c.end=plan.e;c.limit=plan.limit;c.total=plan.total;db.log.push(nowSeoul()+" "+PROD[c.kind]+" 수정")}
     else if(plan){const r=addProd(u.type,plan.kind,u.name,u.pw,plan.start,plan.months,plan.limit,plan.total);if(!r.ok){err(r.msg);renderAdmin();return}}
     db.log.push(nowSeoul()+" 이용자 수정");
-    uFlash=u.name+"님 정보를 저장했습니다."+(plan&&!plan.edit?" ("+PROD[plan.kind]+" 추가)":"");editUser=null;renderAdmin();
+    uFlash="";editUser=null;renderAdmin();showUserDone("수정하였습니다",u);
   };
 }
 let setPage=null;
