@@ -218,7 +218,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.11.0";
+const APP_VERSION="v0.11.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -482,7 +482,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
    (admin?'':'<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
    (admin?'':'<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
-   (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(7일 후 삭제)에 동의합니다.</span></label>')+
+   (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(3개월 후 삭제)에 동의합니다.</span></label>')+
    '<div id="rMsg"></div><button class="btn'+(EXT?' ext':(admin?'':' stu'))+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
   if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
@@ -546,13 +546,18 @@ function showUserDone(title,u){
   $("#bg").classList.add("open");burst(kind);$("#ok").onclick=closeSheet;$("#ok").focus();
 }
 /* 예약 기록·지난 정액권·이용권(펼쳐 보기). 관리자 이용자 정보와 내 예약에서 함께 씁니다. 최신순. */
+const KEEP_MONTHS=3; // 지난 예약·지난 상품 보관 기간(개월). 서버에서는 이 기간이 지나면 자동 삭제합니다.
+function keepFrom(){const [y,m,d]=seoulDate().split("-").map(Number);const last=new Date(Date.UTC(y,m-1-KEEP_MONTHS+1,0)).getUTCDate();return new Date(Date.UTC(y,m-1-KEEP_MONTHS,Math.min(d,last))).toISOString().slice(0,10)}
 function histHtml(resList,oldProds){
+  const from=keepFrom(); // 보관 기간 안의 기록만 보여 줍니다.
+  resList=resList.filter(x=>x.date>=from);oldProds=oldProds.filter(q=>q.end>=from);
   const rs=[...resList].sort((a,b)=>slotStart(b.date,b.hour).localeCompare(slotStart(a.date,a.hour)));
   const st=x=>x.status==="취소"?'<span class="status-cancel">취소</span>'+(x.reason?' · '+esc(x.reason):''):(ended(x.date,x.hour)?'이용 시간 지남':'예약 확정');
   const rItems=rs.map(x=>'<div class="item"><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':'')+'<div class="hint">'+st(x)+'</div></div>').join("");
   const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
   const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+prodUsed(q)+'회 사용':'하루 '+(q.limit?q.limit+'회':'무제한'))+' · 만료</div></div>').join("");
-  return '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
+  return '<p class="hint" style="margin-top:14px">예약 기록과 지난 정액권·이용권은 '+KEEP_MONTHS+'개월 동안 보관된 뒤 삭제됩니다.</p>'+
+    '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
     '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
 }
 function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.add("done",k);return k}
