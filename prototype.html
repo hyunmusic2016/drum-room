@@ -104,6 +104,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
 .item{border-top:1px solid var(--line);padding:12px 0}
 .item:first-child{border-top:0}
+.part+.item{border-top:0}
 .status-cancel{color:var(--danger);font-weight:700}
 .tbl{overflow-x:auto}
 .rules ul{padding-left:20px;margin:8px 0 0}
@@ -201,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.11.5";
+const APP_VERSION="v0.11.6";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -809,9 +810,10 @@ function statusItem({u,i,q},kind){
     '<div style="display:flex;gap:6px;flex:none;align-items:center"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+i+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
 function statusHtml(){
-  const g=statusGroups(),sec=(k,title,sub)=>'<div class="part">'+title+'<small>'+g[k].length+'명'+(sub?' · '+sub:'')+'</small></div>'+(g[k].length?g[k].map(x=>statusItem(x,k)).join(""):'<p class="hint">해당하는 이용자가 없습니다.</p>');
-  return '<div class="card"><b>이용자 현황</b>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+'<p class="hint">정액권 '+g.flat.length+'명 · 이용권 '+g.count.length+'명 · 일반 '+g.none.length+'명. 상품 기간이 끝나면 자동으로 일반으로 옮겨집니다.</p>'+
-    sec("flat","정액권","하루 N회")+sec("count","이용권","총 N회")+sec("none","일반","상품 없음")+'</div>';
+  // 정액권·이용권·일반을 각각 따로 된 상자로 보여 줍니다.
+  const g=statusGroups(),sec=(k,title)=>'<div class="card"><div class="part" style="margin-top:0">'+title+'<small>'+g[k].length+'명</small></div>'+(g[k].length?g[k].map(x=>statusItem(x,k)).join(""):'<p class="hint">해당하는 이용자가 없습니다.</p>')+'</div>';
+  return '<h2 style="margin:4px 0 6px">이용자 현황</h2>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
+    sec("flat","정액권")+sec("count","이용권")+sec("none","일반");
 }
 function bindStatus(){
   document.querySelectorAll("[data-sv]").forEach(el=>{
