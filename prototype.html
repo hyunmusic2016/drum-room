@@ -112,9 +112,6 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .cols{display:grid;gap:8px;align-items:end}
 .cols.c2{grid-template-columns:1fr 1fr}
 .cols.c3{grid-template-columns:1.5fr 1fr 1fr}
-.cols.c3e{grid-template-columns:1fr 1fr .8fr}
-.cols.c3e input[type=date]{padding:8px 5px;font-size:13px}
-.cols.c3e input[type=date]::-webkit-calendar-picker-indicator{margin:0;padding:0;width:14px}
 .cols>div{min-width:0}
 .cols label{font-size:13px}
 .req{color:var(--danger);font-weight:900}
@@ -202,7 +199,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.13.0";
+const APP_VERSION="v0.13.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -602,6 +599,7 @@ $("#aGo").onclick=()=>{
 /* 정액권·이용권 기간은 일수로 입력(기본 30일). 종료일 = 시작일 + 일수 − 1일 */
 const PERIOD_DAYS=30;
 function periodEnd(start,days){return addDays(start,days-1)}
+function spanDays(start,end){return Math.round((Date.parse(end)-Date.parse(start))/864e5)+1} // 시작일~종료일 일수(양 끝 포함)
 function periodText(start,days){return "종료일: "+periodEnd(start,days)+" ("+days+"일)"}
 function daysVal(id){const v=$("#"+id).value.trim();return /^\d{1,3}$/.test(v)&&+v>=1?+v:0} // 1~999일, 잘못된 값은 0
 function numInput(id,label,v,max){return '<label for="'+id+'">'+label+'</label><input type="text" id="'+id+'" inputmode="numeric" maxlength="'+String(max).length+'" autocomplete="off" placeholder="숫자" value="'+(v||"")+'">'}
@@ -714,12 +712,9 @@ function userFields(p,u){
     '<label for="'+p+'Memo">메모 (선택)</label><input type="text" id="'+p+'Memo" maxlength="100" autocomplete="off" value="'+esc(u.memo||"")+'">';
 }
 function userHtml(){
-  const t=seoulDate();
   return '<div class="card"><b>이용자 등록</b>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
     typeChecks("u","ext")+userFields("u")+
-    '<div class="part" style="margin-top:22px">정액권·이용권</div>'+
-    '<label for="uKind" style="margin-top:0">종류</label><select id="uKind" style="width:100%"><option value="none">없음</option><option value="flat">정액권 (기간 동안 하루 N회)</option><option value="count">이용권 (기간 동안 총 N회, 외부 이용자 전용)</option></select>'+
-    '<div id="uProd" class="hidden"><div class="cols c3"><div><label for="uStart">시작일</label><input type="date" id="uStart" value="'+t+'"></div><div><label for="uDays">기간 (일)</label><input type="text" id="uDays" inputmode="numeric" maxlength="3" autocomplete="off" value="'+PERIOD_DAYS+'"></div><div id="uQty"></div></div><p class="hint" id="uEnd"></p></div>'+
+    '<div class="part" style="margin-top:22px">정액권·이용권</div>'+newProdFields("u","ext")+
     '<div id="uMsg"></div><button class="btn" id="uGo">이용자 등록</button></div>'+
     '<div class="card"><b>등록 안내 문자</b>'+
     '<div class="smsbox">'+esc(EXT_REG_SMS)+'</div>'+
@@ -732,30 +727,35 @@ function readUserFields(p,isNew){
   if(!phone)return {err:"전화번호를 올바르게 입력하십시오. (예: 010-1234-5678)"};
   return {name,pw,phone,part:$("#"+p+"Part").value.trim(),memo:$("#"+p+"Memo").value.trim()};
 }
-/* 정액권·이용권 새로 추가하는 칸(종류 없음/정액권/이용권 + 시작일·기간·횟수). 이용자 등록과 이용자 수정에서 함께 씁니다. */
+/* 정액권·이용권 입력 칸은 이 함수들 하나로 그립니다. 이용자 등록, 이용자 수정(새로 추가·기존 상품 수정)이 모두 같은 칸을 쓰므로
+   여기만 고치면 세 곳이 함께 바뀝니다(사용자 요청: 등록 폼이 바뀌면 수정 폼도 똑같이).
+   prodPeriodFields: 시작일 | 기간 (일) | 하루 또는 총 이용 횟수 + "종료일: … (N일)" 표시 */
+function prodPeriodFields(p,start,days,qty){
+  return '<div class="cols c3"><div><label for="'+p+'Start">시작일</label><input type="date" id="'+p+'Start" value="'+start+'"></div><div><label for="'+p+'Days">기간 (일)</label><input type="text" id="'+p+'Days" inputmode="numeric" maxlength="3" autocomplete="off" value="'+days+'"></div><div id="'+p+'Qty">'+(qty||"")+'</div></div><p class="hint" id="'+p+'End"></p>';
+}
+function bindPeriod(p){const updEnd=()=>{const s=$("#"+p+"Start").value,d=daysVal(p+"Days");$("#"+p+"End").textContent=s&&d?periodText(s,d):""};$("#"+p+"Start").oninput=updEnd;$("#"+p+"Days").oninput=updEnd;updEnd();return updEnd}
+function readPeriod(p){const start=$("#"+p+"Start").value,days=daysVal(p+"Days");return start&&days?{start,days}:{err:"시작일과 기간(일)을 확인하십시오. 기간은 1 이상의 숫자로 입력하십시오."}}
+/* 정액권·이용권 새로 추가하는 칸(종류 없음/정액권/이용권 + 시작일·기간·횟수). */
 function newProdFields(p,type){
-  const t=seoulDate();
   return '<label for="'+p+'Kind" style="margin-top:0">종류</label><select id="'+p+'Kind" style="width:100%"><option value="none">없음</option><option value="flat">정액권 (기간 동안 하루 N회)</option><option value="count"'+(type==="stu"?' disabled':'')+'>이용권 (기간 동안 총 N회, 외부 이용자 전용)</option></select>'+
-    '<div id="'+p+'Prod" class="hidden"><div class="cols c3"><div><label for="'+p+'Start">시작일</label><input type="date" id="'+p+'Start" value="'+t+'"></div><div><label for="'+p+'Days">기간 (일)</label><input type="text" id="'+p+'Days" inputmode="numeric" maxlength="3" autocomplete="off" value="'+PERIOD_DAYS+'"></div><div id="'+p+'Qty"></div></div><p class="hint" id="'+p+'End"></p></div>';
+    '<div id="'+p+'Prod" class="hidden">'+prodPeriodFields(p,seoulDate(),PERIOD_DAYS)+'</div>';
 }
 function bindNewProd(p,isExt){
-  const updEnd=()=>{const s=$("#"+p+"Start").value,d=daysVal(p+"Days");$("#"+p+"End").textContent=s&&d?periodText(s,d):""};
   const sync=()=>{
     const ext=isExt(),ko=$("#"+p+"Kind");
     ko.querySelector('option[value="count"]').disabled=!ext;if(!ext&&ko.value==="count")ko.value="flat";
     $("#"+p+"Prod").classList.toggle("hidden",ko.value==="none");
     if(ko.value!=="none"&&$("#"+p+"Qty").dataset.k!==ko.value){$("#"+p+"Qty").innerHTML=qtyCtl(p,ko.value);$("#"+p+"Qty").dataset.k=ko.value}
   };
-  $("#"+p+"Kind").onchange=sync;$("#"+p+"Start").oninput=updEnd;$("#"+p+"Days").oninput=updEnd;sync();updEnd();
+  $("#"+p+"Kind").onchange=sync;bindPeriod(p);sync();
   return sync;
 }
 function readNewProd(p){ // {kind:"none"} 또는 {kind,start,days,limit,total} 또는 {err}
   const kind=$("#"+p+"Kind").value;if(kind==="none")return {kind};
   let limit=null,total=null;
   if(kind==="flat"){const lm=limRead(p);if(!lm.ok)return {err:lm.msg};limit=lm.limit}else{const tr=totRead(p);if(!tr.ok)return {err:tr.msg};total=tr.total}
-  const start=$("#"+p+"Start").value,days=daysVal(p+"Days");
-  if(!start||!days)return {err:"시작일과 기간(일)을 확인하십시오. 기간은 1 이상의 숫자로 입력하십시오."};
-  return {kind,start,days,limit,total};
+  const pr=readPeriod(p);if(pr.err)return pr;
+  return {kind,start:pr.start,days:pr.days,limit,total};
 }
 function bindUser(){
   const sc=$("#smsCopy");if(sc)sc.onclick=async()=>{
@@ -763,25 +763,16 @@ function bindUser(){
     $("#smsMsg").textContent=ok?"복사되었습니다. 문자 앱에 붙여 넣어 보내십시오.":"자동 복사가 되지 않았습니다. 위 문구를 길게 눌러 직접 복사하십시오.";
   };
   if(!$("#uGo"))return;
-  const updEnd=()=>{const s=$("#uStart").value,d=daysVal("uDays");$("#uEnd").textContent=s&&d?periodText(s,d):""};
-  const sync=()=>{ // 재원생이면 이용권 선택 불가, 종류에 따라 하루/총 횟수 칸 전환
-    const ext=$("#uT2").checked,ko=$("#uKind");
-    ko.querySelector('option[value="count"]').disabled=!ext;if(!ext&&ko.value==="count")ko.value="flat";
-    $("#uProd").classList.toggle("hidden",ko.value==="none");
-    if(ko.value!=="none"&&$("#uQty").dataset.k!==ko.value){$("#uQty").innerHTML=qtyCtl("u",ko.value);$("#uQty").dataset.k=ko.value}
-  };
-  bindTypeChecks("u",sync);$("#uKind").onchange=sync;$("#uStart").oninput=updEnd;$("#uDays").oninput=updEnd;sync();updEnd();
+  const sync=bindNewProd("u",()=>$("#uT2").checked); // 재원생이면 이용권 선택 불가, 종류에 따라 하루/총 횟수 칸 전환
+  bindTypeChecks("u",sync);
   $("#uGo").onclick=()=>{
     const err=m=>{uFlash="";const ok=$("#sec-ext .card .msg.ok");if(ok)ok.remove();$("#uMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
     const type=$("#uT1").checked?"stu":"ext",f=readUserFields("u",true);if(f.err){err(f.err);return}
     if(db.users.some(u=>u.type===type&&norm(u.name)===f.name&&u.pw===f.pw)){err("같은 이름과 비밀번호로 등록된 이용자가 이미 있습니다. 다른 비밀번호를 사용하십시오.");return}
-    const kind=$("#uKind").value;let limit=null,total=null;
-    if(kind==="flat"){const lm=limRead("u");if(!lm.ok){err(lm.msg);return}limit=lm.limit}
-    if(kind==="count"){const tr=totRead("u");if(!tr.ok){err(tr.msg);return}total=tr.total}
-    if(kind!=="none"&&!daysVal("uDays")){err("기간(일)을 1 이상의 숫자로 입력하십시오.");return}
+    const np=readNewProd("u");if(np.err){err(np.err);return}
     db.users.push({type,name:f.name,pw:f.pw,phone:f.phone,part:f.part,memo:f.memo});
-    if(kind!=="none"){
-      const r=addProd(type,kind,f.name,f.pw,$("#uStart").value,daysVal("uDays"),limit,total);
+    if(np.kind!=="none"){
+      const r=addProd(type,np.kind,f.name,f.pw,np.start,np.days,np.limit,np.total);
       if(!r.ok){db.users.pop();err(r.msg);return} // 상품 등록이 안 되면 이용자 등록도 취소
     }
     db.log.push(nowSeoul()+" 이용자 등록");
@@ -904,8 +895,8 @@ function userEditHtml(){
   let prod;
   if(c){
     prod='<div style="margin-bottom:4px"><span class="badge '+c.kind+'" style="margin-left:0">'+PROD[c.kind]+'</span>'+(c.start>seoulDate()?' <span class="hint">시작 예정</span>':'')+'</div>'+
-      '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+c.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+c.end+'"></div><div>'+qtyCtl("e",c.kind,c.kind==="count"?c.total:c.limit)+'</div></div>'+
-      '<div class="row" style="margin-top:8px"><p class="hint" id="eDays" style="margin:0"></p>'+(c.kind==="flat"?'<button class="btn ghost small" id="eExt">30일 연장</button>':'')+'</div>'+
+      prodPeriodFields("e",c.start,spanDays(c.start,c.end),qtyCtl("e",c.kind,c.kind==="count"?c.total:c.limit))+
+      (c.kind==="flat"?'<button class="btn ghost small" id="eExt">30일 연장</button>':'')+
       (c.kind==="count"?'<p class="hint">지금까지 '+prodUsed(c)+'회 사용했습니다(취소된 예약 제외).</p>':'')+'<p class="hint" id="eExtMsg"></p>';
   }else{
     prod=(q?'<p class="hint" style="margin:0 0 8px">지난 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+' 만료</p>':'')+newProdFields("ue",u.type);
@@ -920,12 +911,11 @@ function bindUserEdit(){
   const u=db.users[editUser],c=curProd(u);
   $("#ueBack").onclick=()=>{editUser=null;renderAdmin()};
   if(c){
-    const upd=()=>{const s=$("#eStart").value,e=$("#eEnd").value;$("#eDays").textContent=s&&e&&s<=e?"이용 기간: "+(Math.round((Date.parse(e)-Date.parse(s))/864e5)+1)+"일":""};
-    $("#eStart").oninput=upd;$("#eEnd").oninput=upd;upd();
-    if($("#eExt"))$("#eExt").onclick=()=>{ // 정액권만: 종료일 칸만 30일 늘립니다. 저장을 눌러야 반영됩니다.
-      const t=seoulDate(),e=$("#eEnd").value;
-      if(e&&e>=t){$("#eEnd").value=addDays(e,PERIOD_DAYS)}else{$("#eStart").value=t;$("#eEnd").value=periodEnd(t,PERIOD_DAYS)} // 30일 연장
-      upd();$("#eExtMsg").textContent="종료일을 "+$("#eEnd").value+"(으)로 30일 늘렸습니다. 저장을 눌러야 반영됩니다.";
+    const upd=bindPeriod("e");
+    if($("#eExt"))$("#eExt").onclick=()=>{ // 정액권만: 기간 칸에 30일을 더합니다. 저장을 눌러야 반영됩니다.
+      const d=daysVal("eDays");if(!d||d+PERIOD_DAYS>999){$("#eExtMsg").textContent="기간(일)을 확인하십시오. 기간은 999일까지 입력할 수 있습니다.";return}
+      $("#eDays").value=d+PERIOD_DAYS;upd();
+      $("#eExtMsg").textContent="기간을 "+(d+PERIOD_DAYS)+"일로 30일 늘렸습니다. 저장을 눌러야 반영됩니다.";
     };
     $("#eStop").onclick=()=>{
       if(!confirm("이 "+PROD[c.kind]+"을 종료하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
@@ -946,10 +936,10 @@ function bindUserEdit(){
     // 상품 확인을 모두 마친 뒤에 저장합니다(중간에 실패하면 아무것도 바뀌지 않음).
     let plan=null;
     if(c){
-      const s=$("#eStart").value,e=$("#eEnd").value;let limit=null,total=null;
+      const pr=readPeriod("e");if(pr.err){err(pr.err);return}
+      const s=pr.start,e=periodEnd(pr.start,pr.days);let limit=null,total=null;
       if(c.kind==="count"){const tr=totRead("e");if(!tr.ok){err(tr.msg);return}total=tr.total;const used=prodUsed(c);if(total<used){err("이미 "+used+"회 사용했습니다. 총 이용 횟수는 "+used+"회 이상이어야 합니다.");return}}
       else{const lm=limRead("e");if(!lm.ok){err(lm.msg);return}limit=lm.limit}
-      if(!s||!e||s>e){err("시작일과 종료일을 확인하십시오. 종료일은 시작일과 같거나 이후여야 합니다.");return}
       if(db.passes.some(q=>q!==c&&mine(q)&&q.start<=e&&q.end>=s)){err("이 이용자의 다른 상품과 기간이 겹칩니다.");return}
       plan={edit:true,s,e,limit,total};
     }else{
