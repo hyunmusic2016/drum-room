@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#9C5238;--ext-btn:#9C5238;--ext-line:#9C5238;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#A0C6E9;--accent-strong:#5b95cc;--accent-text:#2d6596;--accent-ink:#14304d;--ext-text:#9C5238;--ext-btn:#9C5238;--ext-line:#9C5238;--ext-ink:#fff;--stu-text:#0a6f72;--stu-btn:#0e9194;--brass:#a9741a;--brass-bg:#f6e9cf;--cnt:#6e3f6b;--cnt-bg:#f1e6f0;--flat:#85590f;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -53,6 +53,8 @@ h2{font-size:18px;font-weight:700;margin:20px 0 8px}
 .slot.past{background:var(--past);color:var(--sub);cursor:not-allowed}
 .slot.blocked{background:repeating-linear-gradient(135deg,var(--past),var(--past) 6px,var(--taken) 6px,var(--taken) 12px);cursor:not-allowed}
 .badge{display:inline-block;background:var(--brass-bg);color:var(--brass);border:1px solid var(--brass);border-radius:999px;font-size:11px;padding:0 7px;font-weight:700;margin-left:4px}
+.badge.flat{color:var(--flat);border-color:var(--flat)}
+.badge.count{background:var(--cnt-bg);color:var(--cnt);border-color:var(--cnt)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin:10px 0}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
 label{display:block;font-weight:700;font-size:14px;margin:16px 0 8px}
@@ -202,7 +204,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.6.0";
+const APP_VERSION="v0.6.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -370,7 +372,7 @@ function openMoveSheet(id,name,pw){
         let cls="free",txt="선택",dis="";
         if(cur){cls="taken";txt="현재 예약";dis="disabled"}
         else if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-        else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
+        else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge '+s.prod+'">'+PROD[s.prod]+'</i>':"");dis="disabled"}
         else if(s.past){cls="past";txt="";dis="disabled"}
         return '<button class="slot '+cls+'" data-mh="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
       }).join("")+'</div>';
@@ -436,7 +438,7 @@ function renderBook(){
   const cells=publicStatus(curDate).map(s=>{
     let cls="free",txt="예약 가능",dis="";
     if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(s.masked)+(s.prod?'<i class="badge '+s.prod+'">'+PROD[s.prod]+'</i>':"");dis="disabled"}
     else if(s.past){cls="past";txt="";dis="disabled"}
     return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
   });
@@ -472,7 +474,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=p.end.split("-").map(Number);
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const remain=p.kind==="count"?prodLeftText(p,D):(D===allowedDates()[0]?"오늘":"내일")+" 이용 "+prodLeftText(p,D);
-    $("#rBadge").innerHTML='<i class="badge">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
+    $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
   };
   $("#rName").oninput=badge;$("#rPw").oninput=badge;
   let busy=false;
@@ -485,7 +487,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
       if(r.refresh){admin?renderProxy():renderBook()}
       return;
     }
-    const kind=doneKind(r.rec.ext);$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.prod?'<i class="badge">'+PROD[r.rec.prod]+'</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
+    const kind=doneKind(r.rec.ext);$("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>예약이 확정되었습니다</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(r.rec.name)+(r.rec.prod?'<i class="badge '+r.rec.prod+'">'+PROD[r.rec.prod]+'</i>':"")+'</div><div>'+dateLabel(r.rec.date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(r.rec.hour)+'</div></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p><button class="btn" id="ok">확인</button>';
     burst(kind);$("#ok").onclick=closeSheet;if(admin){renderProxy()}else{selHour=null;curDate=allowedDates()[0];renderBook()}
   };
 }
@@ -534,12 +536,12 @@ $("#mFind").onclick=()=>{
     const [ty,tm,td]=seoulDate().split("-").map(Number),[ey,em,ed]=P.end.split("-").map(Number);
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const col=P.target==="ext"?"--ext-text":"--stu-text";
-    h+='<div class="card"><b>'+PROD[P.kind]+' 회원</b><span class="badge">'+PROD[P.kind]+'</span>'+
+    h+='<div class="card"><b>'+PROD[P.kind]+' 회원</b><span class="badge '+P.kind+'">'+PROD[P.kind]+'</span>'+
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
   }
   if(!r.list.length)h+='<div class="msg ok">예약 내역이 없습니다.</div>';
-  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
+  h+=r.list.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="취소"?"status-cancel":"")+'">'+x.status+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
   $("#mOut").innerHTML='<div class="card">'+h+'</div>';
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m,name,pw));
   document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
@@ -574,7 +576,7 @@ function totCtl(p,total){
 }
 function qtyCtl(p,kind,v){return kind==="count"?totCtl(p,v||10):limCtl(p,v===undefined?5:v)}
 function tgtLabel(t){return t==="ext"?"외부 이용자":"재원생"}
-function prodBadges(q){return '<span class="badge" style="color:var('+(q.target==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(q.target)+'</span><span class="badge">'+PROD[q.kind]+'</span>'}
+function prodBadges(q){return '<span class="badge" style="color:var('+(q.target==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(q.target)+'</span><span class="badge '+q.kind+'">'+PROD[q.kind]+'</span>'}
 function addProd(target,kind,name,pw,start,months,limit,total){
   name=norm(name.trim());
   if(target==="stu"&&kind!=="flat")return {ok:false,msg:"재원생은 정액권만 등록할 수 있습니다."};
@@ -831,7 +833,7 @@ function renderProxy(){
     const r=db.reservations.find(x=>x.date===curDateA&&x.hour===s.hour&&x.status==="확정");
     let cls="free",txt="예약 가능",dis="";
     if(s.blocked){cls="blocked";txt="이용 불가";dis="disabled"}
-    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(r.name)+(s.prod?'<i class="badge">'+PROD[s.prod]+'</i>':"");dis="disabled"}
+    else if(s.taken){cls="taken "+(s.ext?"ext":"stu");txt=esc(r.name)+(s.prod?'<i class="badge '+s.prod+'">'+PROD[s.prod]+'</i>':"");dis="disabled"}
     else if(s.past){cls="past";txt="";dis="disabled"}
     return '<button class="slot '+cls+'" data-h="'+s.hour+'" '+dis+'><b>'+hourLabel(s.hour)+'</b><span>'+txt+'</span></button>';
   });
@@ -842,7 +844,7 @@ function renderAdmin(){
   const rows=[...db.reservations].sort((a,b)=>slotStart(a.date,a.hour).localeCompare(slotStart(b.date,b.hour)));
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div><div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
-   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge">'+PROD[r.prod]+'</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
+   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
    '</div></div>'+
    '</div><div id="sec-ext">'+extHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
