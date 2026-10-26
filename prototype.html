@@ -67,6 +67,11 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
+.ro{min-height:48px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);overflow-wrap:anywhere}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
+.kv:first-child{border-top:0}.kv span{color:var(--sub)}.kv b{text-align:right}
+.uitem{cursor:pointer}.uitem:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.uitem .chev{font-size:22px;color:var(--sub);line-height:1;padding-left:2px}
 .smsbox{white-space:pre-line;background:var(--bg);border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:8px;font-size:15px;line-height:1.6;user-select:text;-webkit-user-select:text}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.first{background:transparent;color:var(--ext-text);border:1.5px solid var(--ext-line);margin-top:14px}
@@ -205,7 +210,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.9.1";
+const APP_VERSION="v0.10.0";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -781,9 +786,9 @@ function prodLine(q){
 function statusItem({u,i,q},kind){
   const col=u.type==="ext"?'--ext-text':'--stu-text';
   const line=kind==="none"?(q?'<div class="hint">지난 '+PROD[q.kind]+': '+q.end+' 만료</div>':''):'<div class="hint">'+prodLine(q)+'</div>';
-  return '<div class="item"><div class="row" style="flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:180px"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+
+  return '<div class="item uitem" data-sv="'+i+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+
     '<div class="hint">'+esc(u.phone||"전화번호 없음")+(u.part?' · '+esc(u.part):'')+'</div>'+(u.memo?'<div class="hint">'+esc(u.memo)+'</div>':'')+line+'</div>'+
-    '<div style="display:flex;gap:6px;flex:none"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+i+'"'+(u.phone?'':' disabled')+'>통화</button><button class="btn ghost small" data-se="'+i+'">수정</button><button class="btn danger small" data-sd="'+i+'">삭제</button></div></div></div>';
+    '<div style="display:flex;gap:6px;flex:none;align-items:center"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+i+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
 function statusHtml(){
   const g=statusGroups(),sec=(k,title,sub)=>'<div class="part">'+title+'<small>'+g[k].length+'명'+(sub?' · '+sub:'')+'</small></div>'+(g[k].length?g[k].map(x=>statusItem(x,k)).join(""):'<p class="hint">해당하는 이용자가 없습니다.</p>');
@@ -791,17 +796,49 @@ function statusHtml(){
     sec("flat","정액권","하루 N회")+sec("count","이용권","총 N회")+sec("none","일반","상품 없음")+'</div>';
 }
 function bindStatus(){
-  document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-sv]").forEach(el=>{
+    const open=()=>{viewUser=+el.dataset.sv;uFlash="";renderAdmin()};
+    el.onclick=open;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};
+  });
+  document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); // 통화 버튼은 정보 화면으로 들어가지 않음
     const u=db.users[+b.dataset.sc];if(!u||!u.phone)return;
     if(!confirm(u.name+"님("+u.phone+")에게 전화를 거시겠습니까?"))return;
     const a=document.createElement("a");a.href="tel:"+u.phone.replace(/\D/g,"");a.target="_top";a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
   });
-  document.querySelectorAll("[data-se]").forEach(b=>b.onclick=()=>{editUser=+b.dataset.se;uFlash="";renderAdmin()});
-  document.querySelectorAll("[data-sd]").forEach(b=>b.onclick=()=>{
-    const u=db.users[+b.dataset.sd];
+}
+/* 이용자 정보(읽기 전용): 수정 화면과 같은 배치 + 현재 정액권·이용권 + [수정][삭제] */
+let viewUser=null;
+function userViewHtml(){
+  const u=db.users[viewUser],q=userProd(u),c=curProd(u),col=u.type==="ext"?'--ext-text':'--stu-text',t=seoulDate();
+  const ro=(label,v)=>'<div><label>'+label+'</label><div class="ro">'+(v?esc(v):'<span class="hint" style="margin:0">없음</span>')+'</div></div>';
+  let prod;
+  if(c){
+    const left=Math.round((Date.parse(c.end)-Date.parse(t))/864e5);
+    const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
+    prod='<div style="margin-bottom:6px"><span class="badge '+c.kind+'" style="margin-left:0">'+PROD[c.kind]+'</span></div><div>'+
+      kv("기간",c.start+" ~ "+c.end)+
+      kv("남은 기간",c.start>t?"시작 예정":(left>0?left+"일 남음":"오늘까지"))+
+      (c.kind==="count"
+        ?kv("총 이용 횟수",c.total+"회")+kv("사용한 횟수",prodUsed(c)+"회")+kv("남은 횟수",prodLeft(c)+"회")
+        :kv("하루 이용 횟수",c.limit?c.limit+"회":"무제한")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>';
+  }else{
+    prod='<p class="hint" style="margin:0">사용 중인 정액권·이용권이 없습니다.</p>'+(q?'<p class="hint">지난 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+' 만료</p>':'');
+  }
+  return '<div class="card"><b>이용자 정보</b><div style="margin-top:6px"><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span></div>'+
+    '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
+    '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
+    '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
+    '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
+    '<div style="display:flex;gap:8px;margin-top:18px"><button class="btn ghost" id="vEdit" style="margin:0">수정</button><button class="btn danger" id="vDel" style="margin:0">삭제</button></div></div>';
+}
+function bindUserView(){
+  const u=db.users[viewUser];
+  $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
+  $("#vDel").onclick=()=>{
     if(!confirm(u.name+"님을 삭제하시겠습니까? 이미 확정된 예약은 그대로 유지됩니다."))return;
-    db.users.splice(+b.dataset.sd,1);db.log.push(nowSeoul()+" 이용자 삭제");uFlash=u.name+"님을 삭제했습니다.";renderAdmin();
-  });
+    db.users.splice(viewUser,1);db.log.push(nowSeoul()+" 이용자 삭제");viewUser=null;uFlash=u.name+"님을 삭제했습니다.";renderAdmin();
+  };
 }
 /* 이용자 수정(이용자 정보 + 정액권·이용권을 한 화면에서) */
 function userEditHtml(){
@@ -874,8 +911,8 @@ function bindUserEdit(){
 }
 let setPage=null;
 function settingsHtml(){
-  const back='<button class="btn ghost small" id="setBack" style="margin-bottom:10px">'+(setPage==="status"&&editUser!==null?'← 이용자 현황':'← 설정')+'</button>';
-  if(setPage==="status")return back+(editUser!==null&&db.users[editUser]?userEditHtml():statusHtml());
+  const back='<button class="btn ghost small" id="setBack" style="margin-bottom:10px">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button>';
+  if(setPage==="status")return back+(editUser!==null&&db.users[editUser]?userEditHtml():viewUser!==null&&db.users[viewUser]?userViewHtml():statusHtml());
   if(setPage==="block")return back+blockHtml2();
   if(setPage==="pw")return back+setHtml();
   if(setPage==="proxy")return back+proxyHtml();
@@ -883,8 +920,8 @@ function settingsHtml(){
 }
 function bindSettings(){
   document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin()});
-  const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else{setPage=null}uFlash="";renderAdmin()};
-  if(setPage==="status"){if(editUser!==null&&db.users[editUser])bindUserEdit();else bindStatus()}
+  const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else if(viewUser!==null){viewUser=null}else{setPage=null}uFlash="";renderAdmin()};
+  if(setPage==="status"){if(editUser!==null&&db.users[editUser])bindUserEdit();else if(viewUser!==null&&db.users[viewUser])bindUserView();else bindStatus()}
   if(setPage==="block")bindBlock2();
   if(setPage==="pw")bindSet();
   if(setPage==="proxy")renderProxy();
@@ -893,7 +930,7 @@ let adminTab="list",curDateA=null;
 function tabBtns(){return [["list","예약 목록"],["ext","이용자 등록"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}
 function applyAdminTab(){
   ["list","ext","block"].forEach(k=>$("#sec-"+k).classList.toggle("hidden",k!==adminTab));
-  document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;uFlash="";renderAdmin()}});
+  document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;uFlash="";renderAdmin()}});
 }
 function proxyHtml(){return '<div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div>'}
 function bindProxy(){renderProxy()}
