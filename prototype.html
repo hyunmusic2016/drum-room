@@ -202,7 +202,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.12.0";
+const APP_VERSION="v0.12.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -873,7 +873,7 @@ function userEditHtml(){
   if(c){
     prod='<div style="margin-bottom:4px"><span class="badge '+c.kind+'" style="margin-left:0">'+PROD[c.kind]+'</span>'+(c.start>seoulDate()?' <span class="hint">시작 예정</span>':'')+'</div>'+
       '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+c.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+c.end+'"></div><div>'+qtyCtl("e",c.kind,c.kind==="count"?c.total:c.limit)+'</div></div>'+
-      '<div class="row" style="margin-top:8px"><p class="hint" id="eDays" style="margin:0"></p><button class="btn ghost small" id="eExt">30일 연장</button></div>'+
+      '<div class="row" style="margin-top:8px"><p class="hint" id="eDays" style="margin:0"></p>'+(c.kind==="flat"?'<button class="btn ghost small" id="eExt">30일 연장</button>':'')+'</div>'+
       (c.kind==="count"?'<p class="hint">지금까지 '+prodUsed(c)+'회 사용했습니다(취소된 예약 제외).</p>':'')+'<p class="hint" id="eExtMsg"></p>';
   }else{
     prod=(q?'<p class="hint" style="margin:0 0 8px">지난 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+' 만료</p>':'')+newProdFields("ue",u.type);
@@ -890,7 +890,7 @@ function bindUserEdit(){
   if(c){
     const upd=()=>{const s=$("#eStart").value,e=$("#eEnd").value;$("#eDays").textContent=s&&e&&s<=e?"이용 기간: "+(Math.round((Date.parse(e)-Date.parse(s))/864e5)+1)+"일":""};
     $("#eStart").oninput=upd;$("#eEnd").oninput=upd;upd();
-    $("#eExt").onclick=()=>{ // 종료일 칸만 1개월 늘립니다. 저장을 눌러야 반영됩니다.
+    if($("#eExt"))$("#eExt").onclick=()=>{ // 정액권만: 종료일 칸만 30일 늘립니다. 저장을 눌러야 반영됩니다.
       const t=seoulDate(),e=$("#eEnd").value;
       if(e&&e>=t){$("#eEnd").value=addDays(e,PERIOD_DAYS)}else{$("#eStart").value=t;$("#eEnd").value=periodEnd(t,1)} // 30일 연장
       upd();$("#eExtMsg").textContent="종료일을 "+$("#eEnd").value+"(으)로 30일 늘렸습니다. 저장을 눌러야 반영됩니다.";
