@@ -27,11 +27,7 @@ body{margin:0;background:var(--bg);color:var(--ink);word-break:keep-all;overflow
 .wrap{max-width:560px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
 h1{font-size:26px;font-weight:900;letter-spacing:-.02em;margin:8px 0 2px}
 h2{font-size:18px;font-weight:700;margin:20px 0 8px}
-.lead{color:var(--sub);margin:0 0 12px;font-size:14px}
 .banner{background:var(--brass-bg);color:var(--ink);border-left:4px solid var(--brass);padding:10px 12px;border-radius:6px;font-size:14px;margin:10px 0}
-.debug{border:1px dashed var(--line);border-radius:8px;padding:10px;margin:10px 0;font-size:13px;color:var(--sub)}
-.debug input{font:inherit;margin-top:4px;width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)}
-.debug button{margin-top:6px}
 .tabs{display:flex;gap:8px;margin:12px 0}
 .tab{flex:1;min-height:52px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
 .tab small{display:block;font-weight:400;color:var(--sub);font-size:12px}
@@ -163,21 +159,10 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <body>
 <div class="wrap">
   <h1>드럼 연습실 예약</h1>
-  <p class="lead">오늘과 내일, 1시간 단위로 예약할 수 있습니다. 예약은 즉시 확정됩니다.</p>
   <nav class="mainnav">
     <button data-go="book" aria-current="page">예약하기</button>
     <button data-go="mine">내 예약</button>
   </nav>
-  <div class="banner" id="notice">테스트 화면입니다. 새로고침하면 예약이 초기화됩니다. 실제 서버와 연결되어 있지 않습니다.</div>
-
-  <details class="debug">
-    <summary>테스트용 시각 조정 (서울 기준)</summary>
-    <input type="datetime-local" id="fakeNow">
-    <button class="btn ghost small" id="applyNow">이 시각으로 설정</button>
-    <button class="btn ghost small" id="resetNow">실제 시각으로</button>
-    <p class="hint" id="nowLabel"></p>
-    <p class="hint">샘플 정액권(재원생, 하루 3회): 김정액 / 0000 · 샘플 이용권(외부 이용자, 총 10회): 김외부 / 0000 · 관리자 비밀번호: 0000 (테스트 전용, 새로고침하면 초기화)</p>
-  </details>
 
   <section id="v-book">
     <div class="tabs" id="dayTabs" role="tablist"></div>
@@ -218,10 +203,10 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.11.1";
+const APP_VERSION="v0.11.2";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
-let fakeNow=null;
+let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
 function nowSeoul(){
   const d=fakeNow?new Date(fakeNow):new Date();
   if(fakeNow){return fakeNow}
@@ -458,7 +443,6 @@ function openChooser(){
 function renderBook(){
   const dates=allowedDates();
   if(!dates.includes(curDate))curDate=dates[0];
-  $("#nowLabel").textContent="현재(서울): "+nowSeoul().replace("T"," ").slice(0,16);
   $("#dayTabs").innerHTML=dates.map((d,i)=>'<button class="tab" role="tab" data-d="'+d+'" aria-selected="'+(d===curDate)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
   document.querySelectorAll("#dayTabs .tab").forEach(t=>t.onclick=()=>{curDate=t.dataset.d;renderBook()});
   const cells=publicStatus(curDate).map(s=>{
@@ -1012,8 +996,6 @@ function renderAdmin(){
   bindUser();bindSettings();applyAdminTab();
 }
 
-$("#applyNow").onclick=()=>{const v=$("#fakeNow").value;if(!v)return;fakeNow=v.length===16?v+":00":v;renderBook()};
-$("#resetNow").onclick=()=>{fakeNow=null;$("#fakeNow").value="";renderBook()};
 
 $("#ver").textContent=APP_VERSION;
 seed();renderBook();
