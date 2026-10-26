@@ -88,6 +88,9 @@ nav.mainnav button[aria-current="page"]{color:var(--accent-text);font-weight:700
 .cols{display:grid;gap:8px;align-items:end}
 .cols.c2{grid-template-columns:1fr 1fr}
 .cols.c3{grid-template-columns:1.5fr 1fr 1fr}
+.cols.c3e{grid-template-columns:1fr 1fr .8fr}
+.cols.c3e input[type=date]{padding:8px 5px;font-size:13px}
+.cols.c3e input[type=date]::-webkit-calendar-picker-indicator{margin:0;padding:0;width:14px}
 .cols>div{min-width:0}
 .cols label{font-size:13px}
 .req{color:var(--danger);font-weight:900}
@@ -182,7 +185,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.2.0";
+const APP_VERSION="v0.2.1";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -521,10 +524,17 @@ let editPass=null;
 function isEditing(){return editPass!==null&&!!db.passes[editPass]}
 function editHtml(){
   const p=db.passes[editPass];
-  return '<div class="card"><b>이용권 수정</b><label for="eName">이름</label><input type="text" id="eName" autocomplete="off" value="'+esc(p.name)+'"><label for="ePw">새 비밀번호 4자리</label><input type="password" id="ePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="비워 두면 그대로 유지"><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'">'+limCtl("e",p.limit)+'<p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button></div>';
+  /* 칸 배치는 이용권 등록과 같습니다. 기간은 개월 수 대신 종료일로 직접 고칩니다. */
+  return '<div class="card"><b>이용권 수정</b>'+
+    '<div class="cols c2"><div><label for="eName">이름</label><input type="text" id="eName" autocomplete="off" value="'+esc(p.name)+'"></div><div><label for="ePw">새 비밀번호 4자리</label><input type="password" id="ePw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="비우면 유지"></div></div>'+
+    '<div class="cols c3 c3e"><div><label for="eStart">시작일</label><input type="date" id="eStart" value="'+p.start+'"></div><div><label for="eEnd">종료일</label><input type="date" id="eEnd" value="'+p.end+'"></div><div>'+limCtl("e",p.limit)+'</div></div>'+
+    '<p class="hint" id="eDays"></p><p class="hint">이름이나 비밀번호를 변경하면, 이 이용권으로 예약한 확정 예약에도 동일하게 적용됩니다.</p><div id="eMsg"></div><button class="btn" id="eSave">저장</button><button class="btn ghost" id="eBack">수정 취소</button></div>';
 }
 function bindEdit(){
   $("#eBack").onclick=()=>{editPass=null;renderAdmin()};limBind("e");
+  const upd=()=>{const s=$("#eStart").value,e=$("#eEnd").value;
+    $("#eDays").textContent=s&&e&&s<=e?"이용 기간: "+(Math.round((Date.parse(e)-Date.parse(s))/864e5)+1)+"일":""};
+  $("#eStart").oninput=upd;$("#eEnd").oninput=upd;upd();
   $("#eSave").onclick=()=>{
     const p=db.passes[editPass],old=norm(p.name);
     const name=norm($("#eName").value.trim()),pw=$("#ePw").value,s=$("#eStart").value,e=$("#eEnd").value;
