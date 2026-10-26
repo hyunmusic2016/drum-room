@@ -9,17 +9,17 @@
 <style>
 :root{
   --bg:#f6f4ef;--surface:#fff;--ink:#1d1b2e;--sub:#6b6880;--line:#dcd8cf;
-  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--ext-btn:#c2491a;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
+  --accent:#0e9194;--accent-text:#0a6f72;--ext-text:#c2491a;--ext-btn:#c2491a;--stu-text:#1a5cc8;--stu-btn:#1a5cc8;--accent-ink:#fff;--brass:#a9741a;--brass-bg:#f6e9cf;
   --free:#fff;--taken:#e9e6df;--past:#efede8;--danger:#b3261e;--ok:#1f6b45;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#0e9194;--accent-text:#5fd4d6;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#0e9194;--accent-text:#5fd4d6;--stu-text:#8ab4ff;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}}
 :root[data-theme="dark"]{
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
-  --accent:#0e9194;--accent-text:#5fd4d6;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
+  --accent:#0e9194;--accent-text:#5fd4d6;--stu-text:#8ab4ff;--ext-text:#ff9a6b;--accent-ink:#fff;--brass:#e0a94d;--brass-bg:#3a2f18;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
@@ -45,10 +45,10 @@ h2{font-size:18px;font-weight:700;margin:20px 0 8px}
 .slot.free{border-color:var(--accent)}
 .slot.free span{color:var(--accent-text);font-weight:700}
 .slot.taken{background:var(--taken);cursor:not-allowed}
-.slot.taken.stu span{color:var(--accent-text);font-weight:700}
+.slot.taken.stu span{color:var(--stu-text);font-weight:700}
 .slot.taken.ext span{color:var(--ext-text);font-weight:700}
 .lg{display:inline-flex;align-items:center;gap:5px;font-weight:700}
-.lg.stu{color:var(--accent-text)}
+.lg.stu{color:var(--stu-text)}
 .lg.ext{color:var(--ext-text)}
 .slot.past{background:var(--past);color:var(--sub);cursor:not-allowed}
 .slot.blocked{background:repeating-linear-gradient(135deg,var(--past),var(--past) 6px,var(--taken) 6px,var(--taken) 12px);cursor:not-allowed}
@@ -62,6 +62,7 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
 .btn.ext{background:var(--ext-btn);color:#fff}
+.btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
 a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.first{background:transparent;color:var(--ext-text);border:1.5px solid var(--ext-btn);margin-top:14px}
@@ -116,7 +117,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .tile{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:12px 10px 16px;min-height:200px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
 .tile b{font-size:17px;line-height:1.3}
 .tile small{font-size:12px;color:var(--sub);line-height:1.4}
-.tile.main{border:2px solid var(--accent)}
+.tile.main{border:2px solid var(--stu-btn)}
 .tile.ext{border:2px solid var(--ext-btn)}
 .tile.soon{border-style:dashed}
 .tile .logo{display:flex;align-items:center;justify-content:center;width:100%;height:128px;background:#fff;border:1px solid var(--line);border-radius:10px}
@@ -197,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.3.2";
+const APP_VERSION="v0.3.3";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -426,7 +427,7 @@ function renderBook(){
 
 function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
   $("#sheet").innerHTML=
-   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--accent-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
+   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
    (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
    (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
@@ -434,7 +435,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
    (admin?'':'<p class="hint">'+(EXT?'통화 시 등록하신 비밀번호 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
    (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(7일 후 삭제)에 동의합니다.</span></label>')+
-   '<div id="rMsg"></div><button class="btn'+(EXT?' ext':'')+'" id="rGo">예약하기</button>';
+   '<div id="rMsg"></div><button class="btn'+(EXT?' ext':(admin?'':' stu'))+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
   if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
   if(EXT)$("#firstGo").onclick=()=>openFirstGuide(h);
@@ -451,7 +452,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const used=db.reservations.filter(r=>r.date===D&&norm(r.name)===norm(n)&&r.status==="확정").length;
     const remain=p.limit?Math.max(p.limit-used,0)+"회 남음":"무제한";
-    $("#rBadge").innerHTML='<i class="badge">이용권 회원</i><b style="font-size:13px;margin-left:6px;color:var(--accent-text)">'+(D===allowedDates()[0]?"오늘":"내일")+' 이용 '+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
+    $("#rBadge").innerHTML='<i class="badge">이용권 회원</i><b style="font-size:13px;margin-left:6px;color:var(--stu-text)">'+(D===allowedDates()[0]?"오늘":"내일")+' 이용 '+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+(left>0?left+'일 남음':'오늘까지')+'</span>';
   };
   let busy=false;
   $("#rGo").onclick=()=>{
@@ -510,7 +511,7 @@ $("#mFind").onclick=()=>{
     const left=Math.round((Date.UTC(ey,em-1,ed)-Date.UTC(ty,tm-1,td))/86400000);
     const rem=d=>{if(!(P.start<=d&&d<=P.end))return "이용권 기간 아님";if(!P.limit)return "무제한";const u=db.reservations.filter(x=>x.date===d&&norm(x.name)===norm(P.name)&&x.status==="확정").length;return Math.max(P.limit-u,0)+"회 남음"};
     h+='<div class="card"><b>이용권 회원</b><span class="badge">이용권</span>'+
-      '<div style="margin-top:8px;font-weight:700;color:var(--accent-text)">오늘 이용 '+rem(dts[0])+'<br>내일 이용 '+rem(dts[1])+'</div>'+
+      '<div style="margin-top:8px;font-weight:700;color:var(--stu-text)">오늘 이용 '+rem(dts[0])+'<br>내일 이용 '+rem(dts[1])+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+(left>0?left+'일 남음':(left===0?'오늘까지':'기간 종료'))+'</div></div>';
   }
   if(!r.list.length)h+='<div class="msg ok">예약 내역이 없습니다.</div>';
@@ -762,7 +763,7 @@ function renderAdmin(){
   const rows=[...db.reservations].sort((a,b)=>slotStart(a.date,a.hour).localeCompare(slotStart(b.date,b.hour)));
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div><div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
-   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--accent-text)')+'">'+esc(r.name)+'</b>'+(r.pass?'<span class="badge">이용권</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
+   (rows.length?rows.map(r=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.pass?'<span class="badge">이용권</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="취소"?"status-cancel":"")+'">'+r.status+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="확정"?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-rp="'+r.id+'">비밀번호 변경</button><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>').join(""):'<p class="hint">예약이 없습니다.</p>')+
    '</div></div>'+
    '</div><div id="sec-ext">'+extHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn small" id="out" style="background:#6b4fa0;color:#fff;padding:0 22px">로그아웃</button></div>';
