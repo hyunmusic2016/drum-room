@@ -201,7 +201,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.11.4";
+const APP_VERSION="v0.11.5";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null; // 시험용 시각(화면의 시각 조정 칸은 v0.11.2에서 삭제, 개발자 시험에서만 사용)
@@ -716,13 +716,13 @@ function userFields(p,u){
 function userHtml(){
   const t=seoulDate();
   return '<div class="card"><b>이용자 등록</b>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
-    typeChecks("u","ext")+userFields("u")+'<p class="hint" id="uPwHint"></p>'+
-    '<div class="part" style="margin-top:22px">정액권·이용권<small>선택</small></div>'+
+    typeChecks("u","ext")+userFields("u")+
+    '<div class="part" style="margin-top:22px">정액권·이용권</div>'+
     '<label for="uKind" style="margin-top:0">종류</label><select id="uKind" style="width:100%"><option value="none">없음</option><option value="flat">정액권 (기간 동안 하루 N회)</option><option value="count">이용권 (기간 동안 총 N회, 외부 이용자 전용)</option></select>'+
     '<div id="uProd" class="hidden"><div class="cols c3"><div><label for="uStart">시작일</label><input type="date" id="uStart" value="'+t+'"></div><div><label for="uMon">기간 (개월)</label><input type="number" id="uMon" min="1" max="12" value="1"></div><div id="uQty"></div></div><p class="hint" id="uEnd"></p></div>'+
-    '<div id="uMsg"></div><button class="btn" id="uGo">이용자 등록</button><p class="hint">등록한 이용자는 설정 &gt; 이용자 현황에서 확인·수정·삭제합니다.</p></div>'+
-    '<div class="card"><b>등록 안내 문자</b><p class="hint">등록을 마친 뒤 아래 문구를 복사해 문자로 보내 주십시오. 이 화면에서 문자가 보내지지는 않습니다.</p>'+
-    '<div class="smsbox">'+esc(EXT_REG_SMS)+'</div><p class="hint">'+smsBytes(EXT_REG_SMS)+'/90바이트 (단문)</p>'+
+    '<div id="uMsg"></div><button class="btn" id="uGo">이용자 등록</button></div>'+
+    '<div class="card"><b>등록 안내 문자</b>'+
+    '<div class="smsbox">'+esc(EXT_REG_SMS)+'</div>'+
     '<button class="btn" id="smsCopy">안내 문구 복사</button><p class="hint" id="smsMsg" aria-live="polite"></p></div>';
 }
 function readUserFields(p,isNew){
@@ -769,7 +769,6 @@ function bindUser(){
     ko.querySelector('option[value="count"]').disabled=!ext;if(!ext&&ko.value==="count")ko.value="flat";
     $("#uProd").classList.toggle("hidden",ko.value==="none");
     if(ko.value!=="none"&&$("#uQty").dataset.k!==ko.value){$("#uQty").innerHTML=qtyCtl("u",ko.value);$("#uQty").dataset.k=ko.value}
-    $("#uPwHint").textContent=ext?"비밀번호는 연락하신 전화번호 뒤 4자리로 등록하십시오.":"재원생이 정액권으로 예약할 때 입력할 비밀번호입니다.";
   };
   bindTypeChecks("u",sync);$("#uKind").onchange=sync;$("#uStart").oninput=updEnd;$("#uMon").oninput=updEnd;sync();updEnd();
   $("#uGo").onclick=()=>{
