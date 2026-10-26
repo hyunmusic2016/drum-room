@@ -95,6 +95,10 @@ nav.mainnav button[aria-current="page"]{color:var(--accent-text);font-weight:700
 .cols label{font-size:13px}
 .req{color:var(--danger);font-weight:900}
 .cols input,.cols select{min-width:0;min-height:44px;padding:8px;font-size:14px}
+/* 아이폰 Safari의 날짜 칸은 기본 모양일 때 내용보다 좁아지지 않아 옆 칸과 겹칩니다. 기본 모양을 끄고 칸 폭 안에 가둡니다. */
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:48px}
+.cols input[type=date]{min-height:44px}
+input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .rules li{margin:9px 0;font-size:14px;line-height:1.7}
 #aTabs .tab{font-size:14px;padding:0 4px}
 select{flex:1;min-width:0;min-height:48px;font:inherit;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
@@ -185,7 +189,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.2.1";
+const APP_VERSION="v0.2.2";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
