@@ -61,6 +61,7 @@
   - v0.4.2: **외부 이용자 색을 `#603C2B`(진한 갈색)로 변경(사용자 결정, 시험 적용).** 진한 색이라 밝은 화면에서는 버튼 바탕·테두리·글자 모두 #603C2B 하나로 통일하고 버튼 글씨는 흰색(대비 9.7, 회색 칸 위 글자 7.7). 다크 모드의 글자·테두리(`--ext-text`, `--ext-line`)는 #d9a78f(밝은 갈색), 버튼 바탕은 #603C2B 유지.
   - v0.4.3: **외부 이용자 색을 테라코타 `#9C5238`로 확정(사용자 선택, 후보 비교 이미지에서 A안).** 브랜드 하늘색·원생 청록(차가운 계열)과 반대인 따뜻한 흙빛 주황, 채도 낮춤. 밝은 화면에서 버튼 바탕·테두리·글자 모두 #9C5238(흰 글씨 대비 5.7, 회색 칸 위 글자 4.6). 다크 모드 글자·테두리 #e0a48c.
   - v0.4.4: 관리자 > 등록된 이용권 목록에는 **[수정]만** 남기고, "1개월 연장"과 "종료"를 **수정 화면 안으로** 이동. 연장은 수정 화면의 종료일 칸만 1개월 늘리고(만료된 이용권은 오늘부터 1개월) **저장을 눌러야 반영**, 수정 취소 시 반영 안 됨. "이용권 종료"는 수정 화면 맨 아래 빨간 버튼(구분선으로 저장 버튼과 분리), 확인 창 후 즉시 종료(종료일 = 어제).
+  - v0.4.5: 관리자의 **등록된 이용권**·**외부 이용자** 목록을 **최근 등록 순(새로 등록한 사람이 맨 위)**으로 표시. 수정해도 순서는 바뀌지 않음(등록 시각 기준). 서버 연결 때는 `created_at` 내림차순으로 정렬한다.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`, `*.supabase.co`에 접속할 수 없다(네트워크 정책). 실제 Supabase 검증 전에 사용자가 환경 설정의 Allowed domains에 `*.supabase.co`를 추가해야 한다. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
 
 ---
@@ -142,8 +143,8 @@ Claude Code에서 이어서 작업하기 위한 문서입니다. 이 폴더의 `
 테이블(모두 RLS로 익명 접근 전면 차단. 브라우저는 **함수(RPC) 호출만**):
 - `rooms`(id, name, active, sort)
 - `reservations`(id, room_id, date, hour, name, pw_hash, status[확정/취소], is_pass, is_ext, cancel_reason, created_at) + unique `(room_id, date, hour)` where status='확정'
-- `passes`(name, pw_hash, start, end, daily_limit nullable)
-- `externals`(name, pw_hash, phone, memo)
+- `passes`(name, pw_hash, start, end, daily_limit nullable, created_at)
+- `externals`(name, pw_hash, phone, memo, created_at)  ※ 관리자 목록은 둘 다 `created_at` 내림차순(최근 등록이 맨 위)
 - `blocked_slots`(room_id nullable, date, hour, reason, group_id)
 - `settings`(보관 기간, 이용권 기본 기간, 기본 한도 등)
 - `login_attempts`, `audit_log`

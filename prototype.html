@@ -198,7 +198,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.4.4";
+const APP_VERSION="v0.4.5";
 /* ===== 모의 서버 (실제 서비스에서는 Supabase 함수가 이 역할을 해요) ===== */
 const DAYS_KO=["일","월","화","수","목","금","토"];
 let fakeNow=null;
@@ -596,7 +596,7 @@ function bindEdit(){
 function passCardHtml(){
   if(isEditing())return editHtml();
   const t=seoulDate();
-  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pm="'+i+'">수정</button></div></div></div>').join("");
+  const list=db.passes.map((p,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(p.name)+'</b><span class="badge">이용권</span><div class="hint">'+p.start+' ~ '+p.end+(p.end<t?' · 만료':'')+' · 하루 '+(p.limit?p.limit+'회':'무제한')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn ghost small" data-pm="'+i+'">수정</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
   return '<div class="card"><b>이용권 등록</b>'+
     '<div class="cols c2"><div><label for="gName">이름</label><input type="text" id="gName" autocomplete="off"></div><div><label for="gPw">이용권 비밀번호 4자리</label><input type="password" id="gPw" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
     '<div class="cols c3"><div><label for="gStart">시작일</label><input type="date" id="gStart" value="'+t+'"></div><div><label for="gMon">기간 (개월)</label><input type="number" id="gMon" min="1" max="12" value="1"></div><div>'+limCtl("g",5)+'</div></div>'+
@@ -683,7 +683,7 @@ function extHtml(){
       '<label for="eeMemo">메모 (선택)</label><input type="text" id="eeMemo" maxlength="100" autocomplete="off" value="'+esc(e.memo||"")+'">'+
       '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약에도 동일하게 적용됩니다.</p><div id="eeMsg"></div><button class="btn" id="eeSave">저장</button><button class="btn ghost" id="eeBack">수정 취소</button></div>';
   }
-  const list=db.externals.map((e,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(e.name)+'</b><div class="hint">'+esc(e.phone||"전화번호 없음")+'</div>'+(e.memo?'<div class="hint">'+esc(e.memo)+'</div>':"")+'</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" style="background:#1e8e4e;color:#fff" data-xc="'+i+'"'+(e.phone?'':' disabled')+'>통화</button><button class="btn ghost small" data-xm="'+i+'">수정</button><button class="btn danger small" data-xd="'+i+'">삭제</button></div></div></div>').join("");
+  const list=db.externals.map((e,i)=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+esc(e.name)+'</b><div class="hint">'+esc(e.phone||"전화번호 없음")+'</div>'+(e.memo?'<div class="hint">'+esc(e.memo)+'</div>':"")+'</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" style="background:#1e8e4e;color:#fff" data-xc="'+i+'"'+(e.phone?'':' disabled')+'>통화</button><button class="btn ghost small" data-xm="'+i+'">수정</button><button class="btn danger small" data-xd="'+i+'">삭제</button></div></div></div>').reverse().join(""); // 최근 등록이 맨 위
   return '<div class="card"><b>외부 이용자 등록</b>'+
     '<div class="cols c2"><div><label for="xName">이름 (본명) <span class="req" aria-hidden="true">*</span></label><input type="text" id="xName" aria-required="true" autocomplete="off"></div><div><label for="xPw">비밀번호 4자리 <span class="req" aria-hidden="true">*</span></label><input type="password" id="xPw" aria-required="true" inputmode="numeric" maxlength="4" autocomplete="off"></div></div>'+
     '<label for="xPhone">전화번호 <span class="req" aria-hidden="true">*</span></label><input type="tel" id="xPhone" aria-required="true" inputmode="tel" autocomplete="off" placeholder="010-0000-0000">'+
