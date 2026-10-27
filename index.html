@@ -100,6 +100,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .topbtn svg{width:18px;height:18px;flex:none;color:var(--accent-text)}
 .sheet-bg{position:fixed;inset:0;padding:16px;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10}
 .sheet-bg.open{display:flex}
+/* 다른 페이지(아임웹) 안에 넣었을 때: 창 위치를 스크립트가 "보이는 부분"에 맞춥니다(placeSheet) */
+.embed .sheet-bg{align-items:flex-start}
 .sheet{background:var(--surface);width:100%;max-width:528px;border-radius:18px;padding:18px 16px 22px;max-height:78vh;max-height:78dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:up .18s ease-out}
 @keyframes up{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
@@ -205,7 +207,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.0";
+const APP_VERSION="v0.14.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -459,6 +461,30 @@ function burst(kind){
     c.style.cssText="background:"+cols[i%cols.length]+";--dx:"+Math.round(Math.cos(a)*r)+"px;--dy:"+Math.round(Math.sin(a)*r+80)+"px;--rot:"+Math.round(Math.random()*720-360)+"deg;animation-delay:"+(Math.random()*0.08).toFixed(2)+"s";
     sh.appendChild(c);
   }
+}
+/* ===== 아임웹 등 다른 페이지 안(iframe)에 넣었을 때 창 위치 =====
+   칸 전체의 가운데가 아니라 휴대폰 화면에 지금 보이는 부분의 가운데(모르면 누른 자리 근처)에 창을 띄웁니다. */
+const EMBED=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+if(EMBED)document.documentElement.classList.add("embed");
+let visRect=null,lastTapY=null;
+if(EMBED&&"IntersectionObserver" in window){
+  // 보이는 부분 = 이 화면 중에서 바깥 페이지의 화면에 실제로 보이는 영역(1% 단위로 갱신)
+  new IntersectionObserver(es=>{const e=es[es.length-1];visRect=e.isIntersecting&&e.intersectionRect.height>120?e.intersectionRect:null},
+    {threshold:Array.from({length:101},(_,i)=>i/100)}).observe(document.body);
+}
+document.addEventListener("pointerdown",e=>{lastTapY=e.clientY},true);
+function placeSheet(){
+  if(!EMBED||!$("#bg").classList.contains("open"))return;
+  const sh=$("#sheet"),vh=window.innerHeight;
+  const top0=visRect?visRect.top:Math.max(0,(lastTapY==null?vh/2:lastTapY)-300),h0=visRect?visRect.height:Math.min(640,vh);
+  sh.style.maxHeight=Math.max(240,Math.min(h0-24,720))+"px";
+  const H=sh.offsetHeight;
+  let top=Math.round(top0+(h0-H)/2);top=Math.max(8,Math.min(top,vh-H-8));
+  sh.style.marginTop=Math.max(0,top-16)+"px"; // 16 = 바깥 여백(padding)
+}
+if(EMBED){
+  new MutationObserver(placeSheet).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
+  new MutationObserver(placeSheet).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
 function closeSheet(){$("#sheet").classList.remove("done","stu","ext");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
