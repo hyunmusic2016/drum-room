@@ -21,6 +21,10 @@
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
   --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
+/* "내일" 색(오늘은 브랜드 하늘색 그대로). .tmr 안에서는 강조색을 보라로 바꿉니다: 바탕 #A79BE6, 그 위 글씨 #241a52, 테두리·밑줄 #7a6bd1, 글자 #5446ad */
+.tmr{--accent:#A79BE6;--accent-strong:#7a6bd1;--accent-text:#5446ad;--accent-ink:#241a52}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tmr{--accent:#A79BE6;--accent-strong:#A79BE6;--accent-text:#A79BE6;--accent-ink:#241a52}}
+:root[data-theme="dark"] .tmr{--accent:#A79BE6;--accent-strong:#A79BE6;--accent-text:#A79BE6;--accent-ink:#241a52}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;font:16px/1.5 "Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
@@ -207,7 +211,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.3";
+const APP_VERSION="v0.14.4";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -328,6 +332,7 @@ function openChooser(){
     '<button class="tile main" id="goStudent"><span class="logo"><img src="'+LOGO_SRC+'" alt="현 music academy 로고"></span><b>현실용음악학원 재원생 예약하기</b></button>'+
     '<button class="tile ext" id="goExternal"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#6b6880" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><b>외부 이용자 예약하기</b></button>'+
     '</div><p class="hint" id="extMsg" role="status"></p>';
+  $("#sheet").classList.toggle("tmr",selDate===allowedDates()[1]);
   $("#bg").classList.add("open");
   $("#cx").onclick=closeSheet;
   $("#goStudent").onclick=()=>{curDate=selDate;openSheet(selHour,false)};
@@ -343,7 +348,8 @@ function slotCell(s,nameText){
 function renderBook(){
   const dates=allowedDates();
   if(!dates.includes(curDate))curDate=dates[0];
-  $("#dayTabs").innerHTML=dates.map((d,i)=>'<button class="tab" role="tab" data-d="'+d+'" aria-selected="'+(d===curDate)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
+  $("#dayTabs").innerHTML=dates.map((d,i)=>'<button class="tab'+(i?' tmr':'')+'" role="tab" data-d="'+d+'" aria-selected="'+(d===curDate)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
+  $("#v-book").classList.toggle("tmr",curDate===dates[1]); // 내일을 보는 동안 시간표를 내일 색으로
   document.querySelectorAll("#dayTabs .tab").forEach(t=>t.onclick=()=>{curDate=t.dataset.d;renderBook()});
   if(!board){$("#grid").innerHTML='<p class="hint">예약 현황을 불러오는 중입니다…</p>';$("#grid2").innerHTML="";return}
   const cells=slotsFor(curDate).map(s=>slotCell(s,s.masked));
@@ -356,6 +362,7 @@ function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div>'+dateLabel(date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
 function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
+  $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);
   $("#sheet").innerHTML=
    '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
    (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
@@ -515,7 +522,7 @@ if(EMBED){
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
-function closeSheet(){$("#sheet").classList.remove("done","stu","ext");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
+function closeSheet(){$("#sheet").classList.remove("done","stu","ext","tmr");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 
@@ -556,9 +563,10 @@ async function openMoveSheet(id){
   let md=allowedDates().includes(r.date)?r.date:allowedDates()[0],msg="";
   const draw=()=>{
     const dates=allowedDates();
+    $("#sheet").classList.toggle("tmr",md===dates[1]);
     $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">시간 변경</h2><button class="btn ghost small" id="mx">닫기</button></div>'+
       '<p class="hint">현재 예약: '+dateLabel(r.date)+' '+hourLabel(r.hour)+'<br>새 시간을 선택하면 기존 예약이 새 시간으로 이동됩니다.</p>'+
-      '<div class="tabs">'+dates.map((d,i)=>'<button class="tab" data-md="'+d+'" aria-selected="'+(d===md)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("")+'</div>'+
+      '<div class="tabs">'+dates.map((d,i)=>'<button class="tab'+(i?' tmr':'')+'" data-md="'+d+'" aria-selected="'+(d===md)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("")+'</div>'+
       '<div id="mMsg">'+msg+'</div><div class="grid">'+(board?slotsFor(md).map(s=>{
         if(r.date===md&&r.hour===s.hour)return '<button class="slot taken" data-mh="'+s.hour+'" disabled><b>'+hourLabel(s.hour)+'</b><span>현재 예약</span></button>';
         return slotCell(s,s.masked).replace('data-h=','data-mh=');
@@ -980,11 +988,12 @@ function applyAdminTab(){
   document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list")reloadAdmin()}});
 }
 /* 관리자 예약(시간표에서 빈 칸을 눌러 대신 예약). 예약된 칸에는 본명이 보입니다. */
-function proxyHtml(){return '<div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div>'}
+function proxyHtml(){return '<div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
 function renderProxy(){
   const dates=allowedDates();
   if(!dates.includes(curDateA))curDateA=dates[0];
-  $("#pTabs").innerHTML=dates.map((d,i)=>'<button class="tab" role="tab" data-pdt="'+d+'" aria-selected="'+(d===curDateA)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
+  $("#pBox").classList.toggle("tmr",curDateA===dates[1]);
+  $("#pTabs").innerHTML=dates.map((d,i)=>'<button class="tab'+(i?' tmr':'')+'" role="tab" data-pdt="'+d+'" aria-selected="'+(d===curDateA)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("");
   document.querySelectorAll("[data-pdt]").forEach(t=>t.onclick=()=>{curDateA=t.dataset.pdt;renderProxy()});
   if(!board){$("#pGrid").innerHTML='<p class="hint">'+NET_MSG+'</p>';$("#pGrid2").innerHTML="";return}
   const cells=slotsFor(curDateA).map(s=>{
