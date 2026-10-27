@@ -21,10 +21,10 @@
   --bg:#14131f;--surface:#1e1d2d;--ink:#f0eee8;--sub:#a29fb8;--line:#34324a;
   --accent:#A0C6E9;--accent-strong:#A0C6E9;--accent-text:#A0C6E9;--accent-ink:#14304d;--stu-text:#5fd4d6;--ext-text:#e0a48c;--ext-line:#e0a48c;--brass:#e0a94d;--brass-bg:#3a2f18;--cnt:#e2b6df;--cnt-bg:#35213a;--flat:#e0a94d;
   --free:#1e1d2d;--taken:#2a2940;--past:#191827;--danger:#ff8a80;--ok:#7fd6a4;}
-/* "내일" 색(오늘은 브랜드 하늘색 그대로). .tmr 안에서는 강조색을 보라로 바꿉니다: 바탕 #A79BE6, 그 위 글씨 #241a52, 테두리·밑줄 #7a6bd1, 글자 #5446ad */
-.tmr{--accent:#A79BE6;--accent-strong:#7a6bd1;--accent-text:#5446ad;--accent-ink:#241a52}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tmr{--accent:#A79BE6;--accent-strong:#A79BE6;--accent-text:#A79BE6;--accent-ink:#241a52}}
-:root[data-theme="dark"] .tmr{--accent:#A79BE6;--accent-strong:#A79BE6;--accent-text:#A79BE6;--accent-ink:#241a52}
+/* "내일" 색(오늘은 브랜드 하늘색 그대로). .tmr 안에서는 강조색을 보라로 바꿉니다: 바탕 #CDBFF2, 그 위 글씨 #241a52, 테두리·밑줄 #7a6bd1, 글자 #5446ad */
+.tmr{--accent:#CDBFF2;--accent-strong:#7a6bd1;--accent-text:#5446ad;--accent-ink:#241a52}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tmr{--accent:#CDBFF2;--accent-strong:#CDBFF2;--accent-text:#CDBFF2;--accent-ink:#241a52}}
+:root[data-theme="dark"] .tmr{--accent:#CDBFF2;--accent-strong:#CDBFF2;--accent-text:#CDBFF2;--accent-ink:#241a52}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);word-break:keep-all;overflow-wrap:break-word;font:16px/1.5 "Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
@@ -211,7 +211,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.4";
+const APP_VERSION="v0.14.5";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
