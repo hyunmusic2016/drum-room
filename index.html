@@ -219,7 +219,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.10";
+const APP_VERSION="v0.14.11";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -820,41 +820,12 @@ function userViewHtml(){
     '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
     '<div style="margin-top:22px">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div></div>';
 }
-/* 이용권 충전(결정 사항 7): 남은 횟수에 추가 횟수를 더하고, 기간은 충전한 날부터 새로(기존 종료일이 더 늦으면 그대로). */
-function topupEnd(c,days){const b=c.start>seoulDate()?c.start:seoulDate(),e=periodEnd(b,days);return e>c.end?e:c.end}
+/* 이용권 충전 기록(충전 기능은 v0.14.11에서 화면에서 뺌, 예전 기록만 표시) */
 function topupHtml(c){
   const tu=c.topups||[];
-  return (tu.length?'<div class="kv"><span>충전 기록</span><b>'+tu.map(x=>x.date+' +'+x.add+'회 ('+x.days+'일)').join('<br>')+'</b></div>':'')+
-    '<button class="btn ghost" id="vTop" style="margin-top:12px">이용권 충전</button>'+
-    '<div id="vTopBox" class="hidden" style="border:1px solid var(--line);border-radius:12px;padding:4px 12px 12px;margin-top:8px">'+
-    '<div class="cols c2"><div>'+numInput("tAdd","추가 횟수","",999)+'</div><div><label for="tDays">기간 (일)</label><input type="text" id="tDays" inputmode="numeric" maxlength="3" autocomplete="off" value="'+PERIOD_DAYS+'"></div></div>'+
-    '<p class="hint" id="tPrev"></p><div id="tMsg"></div>'+
-    '<div style="display:flex;gap:8px"><button class="btn" id="tGo" style="margin:0">충전</button><button class="btn ghost" id="tCancel" style="margin:0">취소</button></div></div>';
-}
-function bindTopup(c){
-  const box=$("#vTopBox"),prev=()=>{
-    const a=$("#tAdd").value.trim(),d=daysVal("tDays"),n=/^\d+$/.test(a)?+a:0;
-    $("#tPrev").textContent=n&&d?"충전 후: 남은 "+(c.left.total+n)+"회 · "+c.start+" ~ "+topupEnd(c,d):"추가 횟수와 기간을 입력하면 충전 후 결과가 표시됩니다.";
-  };
-  $("#vTop").onclick=()=>{box.classList.remove("hidden");$("#vTop").classList.add("hidden");prev();$("#tAdd").focus()};
-  $("#tCancel").onclick=()=>{box.classList.add("hidden");$("#vTop").classList.remove("hidden");$("#tAdd").value="";$("#tDays").value=PERIOD_DAYS;$("#tMsg").innerHTML=""};
-  $("#tAdd").oninput=prev;$("#tDays").oninput=prev;
-  $("#tGo").onclick=async()=>{
-    const err=m=>{$("#tMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
-    const r=readNum("tAdd",999,"추가 횟수");if(!r.ok){err(r.msg);return}
-    const d=daysVal("tDays");if(!d){err("기간(일)을 1 이상의 숫자로 입력하십시오.");return}
-    if(!confirm("이용권을 "+r.n+"회 충전하시겠습니까?\n충전 후: 남은 "+(c.left.total+r.n)+"회 · "+c.start+" ~ "+topupEnd(c,d)))return;
-    $("#tGo").disabled=true;
-    const res=await rpc("admin_topup",{p_id:c.id,p_add:r.n,p_days:d});
-    if($("#tGo"))$("#tGo").disabled=false;
-    if(res.auth){adminExpired();return}
-    if(!res.ok){err(res.msg);return}
-    await reloadAdmin();showUserDone("충전하였습니다",res.user);
-  };
+  return tu.length?'<div class="kv"><span>충전 기록</span><b>'+tu.map(x=>x.date+' +'+x.add+'회 ('+x.days+'일)').join('<br>')+'</b></div>':'';
 }
 function bindUserView(){
-  const c=A.detail.user.current;
-  if(c&&c.kind==="count")bindTopup(c);
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
 }
 /* 이용자 수정(이용자 정보 + 정액권·이용권을 한 화면에서) */
