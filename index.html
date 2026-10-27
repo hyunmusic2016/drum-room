@@ -207,7 +207,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.1";
+const APP_VERSION="v0.14.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -292,6 +292,7 @@ function stLabel(s){return s==="cancelled"?"취소":"확정"}
 /* ===== 화면 이동 ===== */
 let curDate=null,adminOn=false;
 function go(v){
+  postTop();
   ["book","mine","admin"].forEach(k=>$("#v-"+k).classList.toggle("hidden",k!==v));
   setTopBtn(v);
   if(v==="book"){curDate=null;renderBook();refreshBook()}
@@ -482,7 +483,18 @@ function placeSheet(){
   let top=Math.round(top0+(h0-H)/2);top=Math.max(8,Math.min(top,vh-H-8));
   sh.style.marginTop=Math.max(0,top-16)+"px"; // 16 = 바깥 여백(padding)
 }
+/* 바깥 페이지(아임웹)에 이 화면의 실제 길이를 알려 줍니다. 바깥 페이지의 스크립트가 칸 높이를 여기에 맞춥니다(아래 여백 없앰).
+   창이 열려 있을 때는 창이 들어갈 만큼(최소 640px)은 확보합니다. 보내는 내용은 높이 숫자뿐입니다. */
+function postHeight(){
+  if(!EMBED)return;
+  const h=Math.ceil($(".wrap").getBoundingClientRect().bottom+window.scrollY+16);
+  try{parent.postMessage({type:"drum-room-height",height:Math.max(h,640)},"*")}catch(e){}
+}
+/* 화면을 바꿀 때(예약하기 ↔ 내 예약 ↔ 관리자) 바깥 페이지가 이 화면의 맨 위로 스크롤하도록 알려 줍니다(위가 화면 밖일 때만). */
+function postTop(){if(EMBED)try{parent.postMessage({type:"drum-room-top"},"*")}catch(e){}}
 if(EMBED){
+  if("ResizeObserver" in window)new ResizeObserver(postHeight).observe($(".wrap"));
+  window.addEventListener("load",postHeight);postHeight();
   new MutationObserver(placeSheet).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
   new MutationObserver(placeSheet).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }

@@ -1,0 +1,15 @@
+<!-- 아임웹 코드 칸에 붙여 넣는 코드(방법 A: 페이지 안에 예약 화면 넣기)
+     - 예약 화면이 자기 길이를 알려 주면 칸 높이를 자동으로 맞춥니다(아래 여백 없음).
+     - 스크립트가 막히는 환경에서는 처음 높이(1500px)로 고정되어 보입니다. -->
+<iframe id="drumRoomFrame" src="https://hyunmusic2016.github.io/drum-room/" title="드럼 연습실 예약"
+  style="display:block;width:100%;height:1500px;border:0;overflow:hidden" scrolling="no"></iframe>
+<script>
+(function(){
+  var f=document.getElementById("drumRoomFrame");
+  window.addEventListener("message",function(e){
+    if(e.origin!=="https://hyunmusic2016.github.io"||!e.data)return; // 예약 화면이 보낸 것만 받음
+    if(e.data.type==="drum-room-height"&&e.data.height>0)f.style.height=e.data.height+"px";
+    if(e.data.type==="drum-room-top"){var r=f.getBoundingClientRect();if(r.top<0)window.scrollBy(0,r.top-8)}
+  });
+})();
+</script>
