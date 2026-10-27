@@ -22,7 +22,8 @@
 - `logo.png`: 학원 로고 원본(프로토타입에는 260px로 줄여 base64로 내장).
 - `.gitignore`: `.env` 등 비밀 키 파일을 커밋에서 제외.
 - `.env.example`: 필요한 설정 값의 이름만 적은 견본(실제 키 없음).
-- 앞으로 만들 것: `supabase/migrations/`(번호 붙은 SQL), `supabase/tests/`.
+- `supabase/migrations/001_schema.sql`(표·RLS), `002_public_functions.sql`(도우미 + 공개 함수 6개), `003_admin_functions.sql`(관리자 함수), `004_cleanup.sql`(3개월 정리 + pg_cron 예약). **Supabase SQL Editor에 번호 순서대로 한 번씩 실행.** 새 마이그레이션에서 함수를 만들면 끝에 `revoke execute ... from public, anon, authenticated` 후 필요한 것만 grant(Supabase 기본 권한이 새 함수를 열 수 있음).
+- `supabase/tests/`: `00_local_shim.sql`(로컬 전용: anon/authenticated 역할, auth.uid(), extensions 스키마 흉내), `01_rules_test.sql`(규칙 시험 84개), `run_local.sh`(빈 DB에 마이그레이션+시험), `02_concurrency.sh`(동시 예약 시험). **Supabase에서는 실행하지 않음.** 로컬 실행: `PGHOST=<소켓폴더> PGPORT=<포트> bash supabase/tests/run_local.sh` → 마지막 줄 "모든 시험 통과".
 
 ## 결정 사항 (2026-10-23, 사용자 확정)
 
@@ -103,6 +104,7 @@
 - **다음에 할 일(2026-10-26 사용자 요청, 보류): 사용만료·블랙리스트.** 이용자 수정 화면 맨 아래 [사용만료]·[블랙리스트 추가] 버튼, 설정에 "사용만료 이용자"·"블랙리스트" 메뉴(정액권·이용권·일반 구분 없이 최근에 옮긴 사람이 맨 위). 사용만료 동작은 확정: 쓰던 정액권·이용권 종료, 외부 이용자는 예약 불가(미등록처럼), 재원생은 미등록 재원생처럼 하루 1회 가능, [다시 사용]으로 이용자 현황 복귀. 블랙리스트 동작(예약 차단 범위, 앞으로의 예약 처리)은 미결정.
 - **다음 작업(2026-10-26 사용자 결정): Supabase 적용 시작.** F4(아임웹 iframe 확인)·F5(코드 분리)보다 먼저 서버로 넘어간다(결정 사항 5의 순서 변경). 시작 전 사용자 준비: Supabase 가입·프로젝트 생성(지역 서울), 환경 설정 Allowed domains에 `*.supabase.co` 추가. 첫 작업은 계획을 먼저 보여 주고 확인받은 뒤 마이그레이션 SQL 작성 → 로컬 PostgreSQL 16으로 시험 → 사용자가 Supabase SQL Editor에서 실행.
 - **2026-10-27 Supabase 프로젝트 생성(사용자 완료).** 조직 `hyunmusicdrum`(Free), 프로젝트 `drum-room`, 지역 Northeast Asia (Seoul) `ap-northeast-2`, Project URL `https://ibcvbnpqmlqmdwxkepbl.supabase.co`(공개용 주소). 생성 때 Security: Data API 켬, **Automatically expose new tables 해제**(→ 함수 EXECUTE 권한은 마이그레이션에서 직접 GRANT), **Enable automatic RLS 켬**. GitHub 연동 안 함. 조직 생성 직후 "additional permissions" 경고는 재로그인으로 해결. 작업 환경 Allowed domains에 `*.supabase.co` 추가 완료, 컨테이너에서 접속 확인(키 없이 `/rest/v1/` → 401 응답, 즉 연결됨).
+- **2026-10-27 서버 SQL 작성(사용자 계획 승인).** 001~004 마이그레이션과 로컬 시험 작성. 로컬 PostgreSQL 16에서 규칙 시험 84개 + 동시 예약 시험 2개 통과(확인함). Supabase에는 아직 실행 안 함, 화면(prototype.html)도 아직 연결 안 함.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
 
 ---
@@ -179,7 +181,19 @@ Claude Code에서 이어서 작업하기 위한 문서입니다. 이 폴더의 `
 - 모바일 우선(최대 폭 560px), 터치 영역 44px 이상. 폰트 Noto Sans KR.
 - 로고 파일은 사용자가 업로드한 `현music_단로고_투명재단_BLACK.png`를 260px로 줄여 base64로 HTML에 포함했습니다(원본은 저장소의 `logo.png`).
 
-## 4. Supabase 설계안 (아직 미구현)
+## 4. Supabase 설계안 (2026-10-27: 001~004 SQL 작성·로컬 시험 통과, Supabase 적용 전)
+
+**실제 구현 요약(설계안과 다른 점 포함)**
+- 이용자·상품·예약은 `user_id`로 연결(프로토타입의 이름+비밀번호 대조 대신). 상품은 반드시 등록 이용자에 연결(`products.user_id`). 미등록 재원생 예약은 `user_id` 없이 이름+비밀번호 해시만. 이용자 등록 때 같은 이름·비밀번호의 기존 예약을 그 이용자에 연결.
+- 비밀번호는 bcrypt(`extensions.crypt`, cost 6). 해시라 **비밀번호를 바꾸지 않고 이름·구분만 바꿀 때는 중복(같은 이름+비밀번호) 확인을 못 함**(알려진 한계).
+- 상태값: 예약 `confirmed`/`cancelled`, 상품 `flat`/`count`, 이용자 구분 `stu`/`ext`, 이용자 상태 `active`/`expired`/`blacklisted`(블랙리스트 규칙은 미정이라 `admin_set_status`가 아직 받지 않음).
+- 서버 시각 `app_now()`(서울). 로컬 시험에서만(접속 사용자 postgres) `set app.fake_now`로 시각 변경 가능. Supabase API 요청은 접속 사용자가 authenticator라 바꿀 수 없음.
+- 잠금 키: 내 예약·취소·변경은 이름, 외부 예약은 `ext:이름`, 재원생 정액권 비밀번호는 `stu:이름`, 예약 창 상품 표시는 `info:이름`(상품 있는 사람의 비밀번호 맞혀 보기만 셈).
+- 동시성: 같은 칸은 unique 부분 인덱스, 같은 이름은 `pg_advisory_xact_lock`, 상품은 `for update`로 순서대로 처리.
+- 상품 종료·사용만료 시: 이미 시작한 상품은 종료일을 어제로, 오늘 이후(오늘 포함) 시작한 상품은 삭제(프로토타입 v0.13.2와 같음).
+- 공개 함수(anon): `public_board`, `product_info`, `reserve`, `my_reservations`, `cancel_own`, `move_own`. 관리자 함수(authenticated + `admins` 표 확인): `admin_reservations`, `admin_cancel`, `admin_reserve`, `admin_users`, `admin_user`, `admin_create_user`, `admin_update_user`, `admin_end_product`, `admin_topup`, `admin_set_status`, `admin_blocks`, `admin_block`, `admin_unblock`, `admin_unlock`. 관리자 비밀번호 변경은 Supabase Auth(화면에서 처리).
+
+**원래 설계안**
 
 테이블(모두 RLS로 익명 접근 전면 차단. 브라우저는 **함수(RPC) 호출만**):
 - `rooms`(id, name, active, sort)
