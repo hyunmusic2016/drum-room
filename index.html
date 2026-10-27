@@ -207,7 +207,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.2";
+const APP_VERSION="v0.14.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -474,12 +474,29 @@ if(EMBED&&"IntersectionObserver" in window){
     {threshold:Array.from({length:101},(_,i)=>i/100)}).observe(document.body);
 }
 document.addEventListener("pointerdown",e=>{lastTapY=e.clientY},true);
-function placeSheet(){
+/* 바깥 페이지(아임웹 코드)가 스크롤할 때마다 "이 칸이 화면의 어디에 있는지"(칸 위쪽 위치, 화면 높이)를 알려 줍니다.
+   이 값이 있으면 그것으로, 없으면(옛 아임웹 코드) 위의 보이는 부분 계산으로 창을 화면 가운데에 맞춥니다. */
+let parentView=null;
+window.addEventListener("message",e=>{
+  const d=e.data;
+  if(e.source!==window.parent||!d||d.type!=="drum-room-view"||typeof d.top!=="number"||typeof d.vh!=="number")return;
+  parentView={top:d.top,vh:d.vh};placeSheet(wantFit);wantFit=false;
+});
+let wantFit=false; // 창이 열리거나 내용이 바뀐 직후 한 번: 보이는 칸이 창보다 작으면 바깥 페이지를 조금 스크롤해 달라고 함
+function askView(){if(EMBED){wantFit=true;try{parent.postMessage({type:"drum-room-ask"},"*")}catch(e){}}}
+function placeSheet(fit){
   if(!EMBED||!$("#bg").classList.contains("open"))return;
   const sh=$("#sheet"),vh=window.innerHeight;
-  const top0=visRect?visRect.top:Math.max(0,(lastTapY==null?vh/2:lastTapY)-300),h0=visRect?visRect.height:Math.min(640,vh);
+  let top0,h0;
+  if(parentView){ // 바깥 화면에 보이는 부분 = 칸 안 좌표로 [-칸위쪽, 바깥화면높이-칸위쪽]
+    top0=Math.max(0,-parentView.top);h0=Math.min(vh,parentView.vh-parentView.top)-top0;
+  }
+  if(!parentView||h0<120){
+    top0=visRect?visRect.top:Math.max(0,(lastTapY==null?vh/2:lastTapY)-300);h0=visRect?visRect.height:Math.min(640,vh);
+  }
   sh.style.maxHeight=Math.max(240,Math.min(h0-24,720))+"px";
   const H=sh.offsetHeight;
+  if(fit===true&&parentView&&h0<H+24){try{parent.postMessage({type:"drum-room-need",height:H+24},"*")}catch(e){}}
   let top=Math.round(top0+(h0-H)/2);top=Math.max(8,Math.min(top,vh-H-8));
   sh.style.marginTop=Math.max(0,top-16)+"px"; // 16 = 바깥 여백(padding)
 }
@@ -495,8 +512,8 @@ function postTop(){if(EMBED)try{parent.postMessage({type:"drum-room-top"},"*")}c
 if(EMBED){
   if("ResizeObserver" in window)new ResizeObserver(postHeight).observe($(".wrap"));
   window.addEventListener("load",postHeight);postHeight();
-  new MutationObserver(placeSheet).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
-  new MutationObserver(placeSheet).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
+  new MutationObserver(()=>{askView();placeSheet()}).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
+  new MutationObserver(()=>{askView();placeSheet()}).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
 function closeSheet(){$("#sheet").classList.remove("done","stu","ext");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
