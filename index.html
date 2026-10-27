@@ -106,6 +106,9 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .sheet-bg.open{display:flex}
 /* 다른 페이지(아임웹) 안에 넣었을 때: 창 위치를 스크립트가 "보이는 부분"에 맞춥니다(placeSheet) */
 .embed .sheet-bg{align-items:flex-start}
+/* 예약 방식 선택·입력 창: "오늘/내일" 글자와 창 테두리를 그날 색으로(오늘 하늘, 내일 보라 — .tmr이면 보라 변수) */
+.sheet.daycol{border:2.5px solid var(--accent-strong)}
+.dayw{color:var(--accent-text)}
 .sheet{background:var(--surface);width:100%;max-width:528px;border-radius:18px;padding:18px 16px 22px;max-height:78vh;max-height:78dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:up .18s ease-out}
 @keyframes up{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
@@ -211,7 +214,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.5";
+const APP_VERSION="v0.14.6";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -327,12 +330,12 @@ async function refreshBook(){
 function openChooser(){
   if(selHour===null)return;
   $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">예약 방식 선택</h2><button class="btn ghost small" id="cx">닫기</button></div>'+
-    '<div style="text-align:center;font-weight:900;font-size:26px;line-height:1.4;margin:18px 0 22px">'+(selDate===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(selDate)+'<br>'+hourLabel(selHour)+'</div>'+
+    '<div style="text-align:center;font-weight:900;font-size:26px;line-height:1.4;margin:18px 0 22px">'+(selDate===allowedDates()[0]?'<span class="dayw">오늘</span> ':'<span class="dayw">내일</span> ')+dateLabel(selDate)+'<br>'+hourLabel(selHour)+'</div>'+
     '<div class="choose">'+
     '<button class="tile main" id="goStudent"><span class="logo"><img src="'+LOGO_SRC+'" alt="현 music academy 로고"></span><b>현실용음악학원 재원생 예약하기</b></button>'+
     '<button class="tile ext" id="goExternal"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#6b6880" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span><b>외부 이용자 예약하기</b></button>'+
     '</div><p class="hint" id="extMsg" role="status"></p>';
-  $("#sheet").classList.toggle("tmr",selDate===allowedDates()[1]);
+  $("#sheet").classList.toggle("tmr",selDate===allowedDates()[1]);$("#sheet").classList.add("daycol");
   $("#bg").classList.add("open");
   $("#cx").onclick=closeSheet;
   $("#goStudent").onclick=()=>{curDate=selDate;openSheet(selHour,false)};
@@ -362,9 +365,9 @@ function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div>'+dateLabel(date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
 function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
-  $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);
+  $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);$("#sheet").classList.add("daycol");
   $("#sheet").innerHTML=
-   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?"오늘 ":"내일 ")+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
+   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?'<span class="dayw">오늘</span> ':'<span class="dayw">내일</span> ')+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
    (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
    (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
@@ -458,7 +461,7 @@ function histHtml(resList,oldProds){
     '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
     '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
 }
-function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.add("done",k);return k}
+function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.remove("daycol");$("#sheet").classList.add("done",k);return k}
 const CONFETTI={stu:["#0e9194","#5fd4d6","#0a6f72","#9fe3e4"],ext:["#9C5238","#e0a48c","#c27a5c","#f2c9b4"]};
 function burst(kind){
   if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
@@ -522,7 +525,7 @@ if(EMBED){
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
-function closeSheet(){$("#sheet").classList.remove("done","stu","ext","tmr");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
+function closeSheet(){$("#sheet").classList.remove("done","stu","ext","tmr","daycol");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 
