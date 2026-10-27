@@ -214,7 +214,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.7";
+const APP_VERSION="v0.14.8";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -419,7 +419,7 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
     const kind=doneKind(r.ext);
     $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p>');
     burst(kind);$("#ok").onclick=closeSheet;
-    if(admin){reloadAdmin()}else{selHour=null;curDate=allowedDates()[0];refreshBook()}
+    if(admin){reloadAdmin()}else{selHour=null;curDate=allowedDates()[0];refreshBook();autoHome()}
   };
 }
 /* 외부 이용자 '처음 오시는 분' 안내: 같은 창 안에서 보여 주고, 뒤로 가면 예약 입력으로 돌아갑니다. */
@@ -525,7 +525,20 @@ if(EMBED){
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
-function closeSheet(){$("#sheet").classList.remove("done","stu","ext","tmr","daycol");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
+/* 예약 확정 화면: [확인]을 누르지 않으면 10초 뒤 창을 닫고 처음 예약 화면(맨 위, 오늘)으로 돌아갑니다(관리자 대리 예약은 제외).
+   남은 초를 확인 버튼에 "확인 (N)"으로 보여 줍니다. 창이 닫히면(확인·바깥 누름·Esc) 타이머도 멈춥니다. */
+let homeTimer=null;
+function stopAutoHome(){if(homeTimer){clearInterval(homeTimer);homeTimer=null}}
+function autoHome(){
+  stopAutoHome();let n=10;const b=$("#ok");if(!b)return;
+  const show=()=>{b.textContent="확인 ("+n+")"};show();
+  homeTimer=setInterval(()=>{
+    n--;if(!$("#bg").classList.contains("open")||$("#ok")!==b){stopAutoHome();return}
+    if(n>0){show();return}
+    stopAutoHome();closeSheet();curDate=null;go("book");window.scrollTo(0,0);
+  },1000);
+}
+function closeSheet(){stopAutoHome();$("#sheet").classList.remove("done","stu","ext","tmr","daycol");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 
