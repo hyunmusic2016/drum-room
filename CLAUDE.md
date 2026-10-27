@@ -105,6 +105,7 @@
 - **다음 작업(2026-10-26 사용자 결정): Supabase 적용 시작.** F4(아임웹 iframe 확인)·F5(코드 분리)보다 먼저 서버로 넘어간다(결정 사항 5의 순서 변경). 시작 전 사용자 준비: Supabase 가입·프로젝트 생성(지역 서울), 환경 설정 Allowed domains에 `*.supabase.co` 추가. 첫 작업은 계획을 먼저 보여 주고 확인받은 뒤 마이그레이션 SQL 작성 → 로컬 PostgreSQL 16으로 시험 → 사용자가 Supabase SQL Editor에서 실행.
 - **2026-10-27 Supabase 프로젝트 생성(사용자 완료).** 조직 `hyunmusicdrum`(Free), 프로젝트 `drum-room`, 지역 Northeast Asia (Seoul) `ap-northeast-2`, Project URL `https://ibcvbnpqmlqmdwxkepbl.supabase.co`(공개용 주소). 생성 때 Security: Data API 켬, **Automatically expose new tables 해제**(→ 함수 EXECUTE 권한은 마이그레이션에서 직접 GRANT), **Enable automatic RLS 켬**. GitHub 연동 안 함. 조직 생성 직후 "additional permissions" 경고는 재로그인으로 해결. 작업 환경 Allowed domains에 `*.supabase.co` 추가 완료, 컨테이너에서 접속 확인(키 없이 `/rest/v1/` → 401 응답, 즉 연결됨).
 - **2026-10-27 서버 SQL 작성(사용자 계획 승인).** 001~004 마이그레이션과 로컬 시험 작성. 로컬 PostgreSQL 16에서 규칙 시험 84개 + 동시 예약 시험 2개 통과(확인함). Supabase에는 아직 실행 안 함, 화면(prototype.html)도 아직 연결 안 함.
+- **2026-10-27 Supabase에 001~004 실행 완료(사용자가 SQL Editor에서 실행, 4개 모두 성공했다고 보고).** 실제 Supabase에서의 동작은 아직 키로 직접 확인하지 않음. 다음: 회원가입 막기, 관리자 계정 생성·`admins` 등록, 공개용 키로 접속 확인.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
 
 ---
@@ -181,7 +182,7 @@ Claude Code에서 이어서 작업하기 위한 문서입니다. 이 폴더의 `
 - 모바일 우선(최대 폭 560px), 터치 영역 44px 이상. 폰트 Noto Sans KR.
 - 로고 파일은 사용자가 업로드한 `현music_단로고_투명재단_BLACK.png`를 260px로 줄여 base64로 HTML에 포함했습니다(원본은 저장소의 `logo.png`).
 
-## 4. Supabase 설계안 (2026-10-27: 001~004 SQL 작성·로컬 시험 통과, Supabase 적용 전)
+## 4. Supabase 설계안 (2026-10-27: 001~004 SQL 작성·로컬 시험 통과, Supabase에 실행 완료)
 
 **실제 구현 요약(설계안과 다른 점 포함)**
 - 이용자·상품·예약은 `user_id`로 연결(프로토타입의 이름+비밀번호 대조 대신). 상품은 반드시 등록 이용자에 연결(`products.user_id`). 미등록 재원생 예약은 `user_id` 없이 이름+비밀번호 해시만. 이용자 등록 때 같은 이름·비밀번호의 기존 예약을 그 이용자에 연결.
