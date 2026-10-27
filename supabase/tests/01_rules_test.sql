@@ -88,6 +88,7 @@ select id as ext_pid from public.products where user_id = :ext_uid \gset
 set role anon;
 select test.ok((public.product_info('ext', '김외부', '1111'))->'product' = 'null'::jsonb, '비밀번호가 틀리면 상품 정보 없음');
 select test.ok((public.product_info('ext', '김외부', '0000'))->'product'->>'kind' = 'count', '이름+비밀번호가 맞으면 상품 정보');
+select test.ok((public.product_info('ext', '김외부', '0000'))->'product'->>'target' = 'ext', '상품 정보에 대상 구분(ext) 포함');
 select (public.reserve('2026-10-27', 17, '김외부', '0000', true, 'ext'))->>'id' as e1 \gset
 select test.ok(:e1 > 0, '이용권으로 예약 1');
 select test.ok((public.reserve('2026-10-27', 19, '김외부', '0000', true, 'ext'))->>'prod' = 'count', '외부 이용자는 하루 제한 없음(같은 날 2번째)');
