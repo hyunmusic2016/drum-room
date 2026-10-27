@@ -106,6 +106,7 @@
 - **2026-10-27 Supabase 프로젝트 생성(사용자 완료).** 조직 `hyunmusicdrum`(Free), 프로젝트 `drum-room`, 지역 Northeast Asia (Seoul) `ap-northeast-2`, Project URL `https://ibcvbnpqmlqmdwxkepbl.supabase.co`(공개용 주소). 생성 때 Security: Data API 켬, **Automatically expose new tables 해제**(→ 함수 EXECUTE 권한은 마이그레이션에서 직접 GRANT), **Enable automatic RLS 켬**. GitHub 연동 안 함. 조직 생성 직후 "additional permissions" 경고는 재로그인으로 해결. 작업 환경 Allowed domains에 `*.supabase.co` 추가 완료, 컨테이너에서 접속 확인(키 없이 `/rest/v1/` → 401 응답, 즉 연결됨).
 - **2026-10-27 서버 SQL 작성(사용자 계획 승인).** 001~004 마이그레이션과 로컬 시험 작성. 로컬 PostgreSQL 16에서 규칙 시험 84개 + 동시 예약 시험 2개 통과(확인함). Supabase에는 아직 실행 안 함, 화면(prototype.html)도 아직 연결 안 함.
 - **2026-10-27 Supabase에 001~004 실행 완료(사용자가 SQL Editor에서 실행, 4개 모두 성공했다고 보고).** 실제 Supabase에서의 동작은 아직 키로 직접 확인하지 않음. 다음: 회원가입 막기, 관리자 계정 생성·`admins` 등록, 공개용 키로 접속 확인.
+- **2026-10-27 실제 Supabase 확인(공개용 키로 컨테이너에서 직접 호출, 확인함):** `public_board` 정상(서버 시각 서울, 48칸), 예약·이용자 표 직접 읽기 거부(42501), 관리자 함수·내부 도우미·정리 함수 익명 호출 거부, Auth 설정 `disable_signup = true`(회원가입 막힘). 공개용 키(Publishable, 화면에 넣는 값): `sb_publishable_EuDlhpMAm69J4qB0pMFVYA_bh5RWzo2`. 쓰기 함수(예약 등)는 실제 데이터가 생겨 아직 호출 안 함. 관리자 계정·`admins` 등록은 사용자 확인 대기.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
 
 ---
