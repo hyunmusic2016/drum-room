@@ -102,7 +102,8 @@
   - v0.13.6: 이용자 정보 화면의 **[삭제] 버튼 삭제**(사용자 요청, 지금은 화면에서 이용자를 지울 방법 없음). **[수정] 버튼을 개나리색**(`btn edit`, 바탕 #f5c518 + 글씨 #3d2e00, 다크 모드도 같은 색)으로, 넓이는 한 줄 전체. 앞으로 만드는 모든 [수정] 버튼은 `btn edit`를 쓴다(사용자 요청). 삭제 때 상품을 함께 종료하던 코드(v0.13.2)는 git 기록에 있음.
 - **다음에 할 일(2026-10-26 사용자 요청, 보류): 사용만료·블랙리스트.** 이용자 수정 화면 맨 아래 [사용만료]·[블랙리스트 추가] 버튼, 설정에 "사용만료 이용자"·"블랙리스트" 메뉴(정액권·이용권·일반 구분 없이 최근에 옮긴 사람이 맨 위). 사용만료 동작은 확정: 쓰던 정액권·이용권 종료, 외부 이용자는 예약 불가(미등록처럼), 재원생은 미등록 재원생처럼 하루 1회 가능, [다시 사용]으로 이용자 현황 복귀. 블랙리스트 동작(예약 차단 범위, 앞으로의 예약 처리)은 미결정.
 - **다음 작업(2026-10-26 사용자 결정): Supabase 적용 시작.** F4(아임웹 iframe 확인)·F5(코드 분리)보다 먼저 서버로 넘어간다(결정 사항 5의 순서 변경). 시작 전 사용자 준비: Supabase 가입·프로젝트 생성(지역 서울), 환경 설정 Allowed domains에 `*.supabase.co` 추가. 첫 작업은 계획을 먼저 보여 주고 확인받은 뒤 마이그레이션 SQL 작성 → 로컬 PostgreSQL 16으로 시험 → 사용자가 Supabase SQL Editor에서 실행.
-- 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`, `*.supabase.co`에 접속할 수 없다(네트워크 정책). 실제 Supabase 검증 전에 사용자가 환경 설정의 Allowed domains에 `*.supabase.co`를 추가해야 한다. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
+- **2026-10-27 Supabase 프로젝트 생성(사용자 완료).** 조직 `hyunmusicdrum`(Free), 프로젝트 `drum-room`, 지역 Northeast Asia (Seoul) `ap-northeast-2`, Project URL `https://ibcvbnpqmlqmdwxkepbl.supabase.co`(공개용 주소). 생성 때 Security: Data API 켬, **Automatically expose new tables 해제**(→ 함수 EXECUTE 권한은 마이그레이션에서 직접 GRANT), **Enable automatic RLS 켬**. GitHub 연동 안 함. 조직 생성 직후 "additional permissions" 경고는 재로그인으로 해결. 작업 환경 Allowed domains에 `*.supabase.co` 추가 완료, 컨테이너에서 접속 확인(키 없이 `/rest/v1/` → 401 응답, 즉 연결됨).
+- 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다(아직 실행 안 함).
 
 ---
 
