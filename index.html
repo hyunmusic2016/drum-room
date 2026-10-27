@@ -88,6 +88,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .sh-kind{font-size:15px;font-weight:700;margin:0 0 2px}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn.danger{background:var(--danger);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.danger{color:#3b0d0a}}
+:root[data-theme="dark"] .btn.danger{color:#3b0d0a}
 .btn.edit{background:#f5c518;color:#3d2e00} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -114,6 +116,20 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .admin-warn b{font-size:17px;font-weight:900;display:block}
 .admin-warn small{display:block;font-size:13px;color:var(--ink);opacity:.85;margin-top:2px}
 .admin-warn svg{flex:none;width:28px;height:28px}
+/* 관리자 예약 창: 이름으로 찾은 이용자 목록, 일반예약/슈퍼패스 선택 */
+#rBadge{font-size:13px;font-weight:400}
+.who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
+.who input{width:20px;height:20px;margin:0;flex:none}
+.mode-box{border:1px solid var(--line);border-radius:12px;padding:6px 12px;margin-top:16px}
+.mode-row{display:flex;align-items:center;gap:6px;min-height:44px}
+.mode-row .check span{font-size:16px;font-weight:800}
+.super-t{color:var(--danger)}
+#m_super{accent-color:var(--danger)}
+.info-i{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid currentColor;background:transparent;color:var(--sub);font:italic 700 15px Georgia,serif;cursor:pointer;flex:none;position:relative}
+.info-i::after{content:"";position:absolute;inset:-8px}
+.info-i.super-t{color:var(--danger)}
+.mode-help{margin:0 0 8px 32px}
+.badge.super{background:transparent;color:var(--danger);border-color:var(--danger)}
 .sheet{background:var(--surface);width:100%;max-width:528px;border-radius:18px;padding:18px 16px 22px;max-height:78vh;max-height:78dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 12px 40px rgba(0,0,0,.25);animation:up .18s ease-out}
 @keyframes up{from{transform:scale(.96);opacity:.4}to{transform:none;opacity:1}}
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
@@ -219,7 +235,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.15.0";
+const APP_VERSION="v0.16.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -343,8 +359,8 @@ function openChooser(){
   $("#sheet").classList.toggle("tmr",selDate===allowedDates()[1]);$("#sheet").classList.add("daycol");
   $("#bg").classList.add("open");
   $("#cx").onclick=closeSheet;
-  $("#goStudent").onclick=()=>{curDate=selDate;openSheet(selHour,false)};
-  $("#goExternal").onclick=()=>{curDate=selDate;openSheet(selHour,false,"ext")};
+  $("#goStudent").onclick=()=>{curDate=selDate;openSheet(selHour)};
+  $("#goExternal").onclick=()=>{curDate=selDate;openSheet(selHour,"ext")};
 }
 function slotCell(s,nameText){
   let cls="free",txt="예약 가능",dis="";
@@ -369,32 +385,26 @@ function renderBook(){
 function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div>'+dateLabel(date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
-function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==="ext";
+function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);$("#sheet").classList.add("daycol");
   $("#sheet").innerHTML=
-   '<div class="row" style="align-items:flex-start"><div>'+(admin?'':'<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?'<span class="dayw">오늘</span> ':'<span class="dayw">내일</span> ')+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+(admin?'<button class="btn ghost small" id="x">닫기</button>':'<button class="btn ghost small" id="backCh">← 뒤로</button>')+'</div>'+
+   '<div class="row" style="align-items:flex-start"><div>'+('<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?'<span class="dayw">오늘</span> ':'<span class="dayw">내일</span> ')+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+'<button class="btn ghost small" id="backCh">← 뒤로</button>'+'</div>'+
    (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
-   (admin?'<div style="display:flex;gap:18px;margin-top:14px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"><span style="font-size:15px;font-weight:700">원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2" checked><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>':'')+
    '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
-   (admin?'':'<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
+   ('<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
-   (admin?'':'<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
-   (admin?'':'<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(3개월 후 삭제)에 동의합니다.</span></label>')+
-   '<div id="rMsg"></div><button class="btn'+(EXT?' ext':(admin?'':' stu'))+'" id="rGo">예약하기</button>';
+   ('<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
+   ('<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소용 이름·비밀번호 수집(3개월 후 삭제)에 동의합니다.</span></label>')+
+   '<div id="rMsg"></div><button class="btn'+(EXT?' ext':' stu')+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
-  if(admin)$("#x").onclick=closeSheet;else $("#backCh").onclick=openChooser;
+  $("#backCh").onclick=openChooser;
   if(EXT)$("#firstGo").onclick=()=>openFirstGuide(h);
-  if(admin){
-    const t1=$("#rT1"),t2=$("#rT2");
-    t1.onchange=()=>{if(t1.checked)t2.checked=false;else t1.checked=true};
-    t2.onchange=()=>{if(t2.checked)t1.checked=false;else t2.checked=true};
-  }
   /* 이름과 비밀번호가 모두 맞을 때만 서버가 상품 정보를 줍니다(결정 사항 2). 입력이 멈추면 한 번 물어봅니다. */
   let bt=null,bseq=0;
   const badge=()=>{
     clearTimeout(bt);$("#rBadge").innerHTML="";
     const n=$("#rName").value.trim(),pw=$("#rPw").value;
-    if(admin||!n||!/^\d{4}$/.test(pw))return;
+    if(!n||!/^\d{4}$/.test(pw))return;
     const my=++bseq;
     bt=setTimeout(async()=>{
       const r=await rpc("product_info",{p_mode:EXT?"ext":"stu",p_name:n,p_pw:pw});
@@ -410,21 +420,102 @@ function openSheet(h,admin,mode){const D=admin?curDateA:curDate;const EXT=mode==
   $("#rGo").onclick=async()=>{
     if(busy)return;busy=true;$("#rGo").disabled=true;
     const name=$("#rName").value,pw=$("#rPw").value;
-    const r=admin
-      ?await rpc("admin_reserve",{p_date:D,p_hour:h,p_name:name,p_pw:pw,p_ext:$("#rT2").checked})
-      :await rpc("reserve",{p_date:D,p_hour:h,p_name:name,p_pw:pw,p_consent:$("#rC").checked,p_mode:EXT?"ext":"stu"});
+    const r=await rpc("reserve",{p_date:D,p_hour:h,p_name:name,p_pw:pw,p_consent:$("#rC").checked,p_mode:EXT?"ext":"stu"});
     if(!r.ok){
       if(!$("#rMsg"))return; // 그사이 창을 닫은 경우
       $("#rMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';
       busy=false;$("#rGo").disabled=false;
-      if(r.auth&&admin){adminExpired();return}
-      if(r.refresh){admin?reloadAdmin():refreshBook()}
+      if(r.refresh)refreshBook()
       return;
     }
     const kind=doneKind(r.ext);
     $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p>');
     burst(kind);$("#ok").onclick=closeSheet;
-    if(admin){reloadAdmin()}else{selHour=null;curDate=allowedDates()[0];refreshBook();autoHome()}
+    selHour=null;curDate=allowedDates()[0];refreshBook();autoHome();
+  };
+}
+/* 관리자 예약(v0.16.0): 비밀번호 없이 이름으로 예약. 이름을 넣으면 등록 이용자를 찾아 보여 주고(동명이인은 선택),
+   일반예약(일반 이용자와 같은 규칙) / 슈퍼패스(제한·차감 없음) 중 하나를 고릅니다. 최종 판단은 서버(admin_reserve). */
+const MODE_HELP={
+  normal:"일반 이용자와 같은 규칙으로 예약합니다. 재원생은 하루 1회까지, 정액권·이용권 이용자는 횟수가 차감되고 다 쓰면 예약되지 않습니다. 상품이 없는 외부 이용자는 횟수 제한이 없고, 등록되지 않은 외부 이용자는 예약할 수 없습니다.",
+  super:"하루 횟수, 이용자 등록, 정액권·이용권 확인 없이 바로 확정합니다. 정액권·이용권 횟수도 차감되지 않습니다. 이미 예약된 시간, 지난 시간, 이용 불가 시간만 막습니다."
+};
+function whoInfo(u,D,dc){
+  const p=u.product;
+  return '<b style="color:var('+(u.type==="ext"?'--ext-text':'--stu-text')+')">'+tgtLabel(u.type)+'</b> '+
+    (p?'<i class="badge '+p.kind+'" style="margin-left:0">'+PROD[p.kind]+'</i> '+(p.kind==='flat'?(D===allowedDates()[0]?'오늘 ':'내일 '):'')+prodLeftText(p,D)
+      :'일반 · '+(u.type==="stu"?'하루 1회'+(dc?' (이 날 예약 있음)':''):'횟수 제한 없음'));
+}
+function openAdminSheet(h){const D=curDateA;
+  $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);$("#sheet").classList.add("daycol");
+  const modeRow=(k,label,red)=>'<div class="mode-row"><label class="check" style="margin:0;align-items:center"><input type="checkbox" id="m_'+k+'"'+(k==="normal"?' checked':'')+'><span'+(red?' class="super-t"':'')+'>'+label+'</span></label>'+
+    '<button type="button" class="info-i'+(red?' super-t':'')+'" id="mi_'+k+'" aria-label="'+label+' 설명" aria-expanded="false">i</button></div>'+
+    '<p class="hint mode-help hidden" id="mh_'+k+'">'+MODE_HELP[k]+'</p>';
+  $("#sheet").innerHTML=
+   '<div class="row" style="align-items:flex-start"><div><h2 style="margin:0"><span class="dayw">'+(D===allowedDates()[0]?'오늘':'내일')+'</span> '+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div><button class="btn ghost small" id="x">닫기</button></div>'+
+   '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
+   '<div id="rWho"></div>'+
+   '<div class="mode-box">'+modeRow("normal","일반예약")+modeRow("super","슈퍼패스",true)+'</div>'+
+   '<div id="rMsg"></div><button class="btn" id="rGo">예약하기</button>';
+  $("#bg").classList.add("open");$("#rName").focus();
+  $("#x").onclick=closeSheet;
+  const mN=$("#m_normal"),mS=$("#m_super");
+  const setMode=sup=>{$("#rMsg").innerHTML="";mN.checked=!sup;mS.checked=sup;$("#rGo").classList.toggle("danger",sup);$("#rGo").textContent=sup?"슈퍼패스로 예약하기":"예약하기"};
+  mN.onchange=()=>setMode(!mN.checked);mS.onchange=()=>setMode(mS.checked);
+  ["normal","super"].forEach(k=>{$("#mi_"+k).onclick=()=>{const hp=$("#mh_"+k),open=hp.classList.toggle("hidden")===false;$("#mi_"+k).setAttribute("aria-expanded",open);placeSheet()}});
+  // 이름으로 등록 이용자 찾기: found = 서버 응답, pick = 고른 이용자 id(0이면 목록에 없는 사람), uExt = 미등록일 때 구분
+  let found=null,stale=false,pick=null,uExt=false,fseq=0,ft=null,busy=false;
+  const renderWho=()=>{
+    if(!found){$("#rBadge").innerHTML="";$("#rWho").innerHTML="";return}
+    const us=found.users;
+    if(us.length===1&&pick===null)pick=us[0].id;
+    const sel=us.find(u=>u.id===pick);
+    $("#rBadge").innerHTML=sel?whoInfo(sel,D,found.day_count)
+      :(pick===null&&us.length?'<span style="color:var(--sub)">같은 이름이 '+us.length+'명입니다. 아래에서 선택하십시오.</span>'
+        :'<span style="color:var(--sub)">등록되지 않은 이름</span>');
+    const radio=(v,html)=>'<label class="who"><input type="radio" name="who" value="'+v+'"'+(pick===v?' checked':'')+'><span>'+html+'</span></label>';
+    let html=us.length?us.map(u=>radio(u.id,whoInfo(u,D,found.day_count)+' · 전화 뒤 '+esc(u.phone4)+(u.part?' · '+esc(u.part):''))).join("")+radio(0,'목록에 없는 사람 (미등록)'):'';
+    if(!us.length||pick===0)html+='<div style="display:flex;gap:18px;margin-top:10px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"'+(uExt?'':' checked')+'><span style="font-size:15px;font-weight:700">재원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2"'+(uExt?' checked':'')+'><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>'+
+      '<p class="hint">'+(uExt?'등록되지 않은 외부 이용자는 슈퍼패스로만 예약할 수 있습니다.':'등록되지 않은 재원생: 일반예약은 하루 1회'+(found.day_count?' (이 날 예약 있음)':'')+'.')+' 비밀번호가 없어 ‘내 예약’에서는 보이지 않습니다.</p>';
+    $("#rWho").innerHTML=html;
+    document.querySelectorAll('#rWho input[name="who"]').forEach(x=>x.onchange=()=>{pick=+x.value;renderWho();placeSheet()});
+    if($("#rT1")){$("#rT1").onchange=()=>{uExt=!$("#rT1").checked;renderWho()};$("#rT2").onchange=()=>{uExt=$("#rT2").checked;renderWho()}}
+  };
+  const lookup=async()=>{
+    const n=$("#rName").value.trim(),my=++fseq;
+    if(!n){found=null;stale=false;renderWho();return}
+    const r=await rpc("admin_find_users",{p_name:n,p_date:D});
+    if(my!==fseq||!$("#rWho"))return;
+    if(r.auth){adminExpired();return}
+    found=r.ok?r:null;stale=false;pick=null;renderWho();placeSheet();
+  };
+  $("#rName").oninput=()=>{clearTimeout(ft);stale=true;found=null;pick=null;renderWho();ft=setTimeout(lookup,300)};
+  $("#rGo").onclick=async()=>{
+    if(busy)return;
+    const err=m=>{$("#rMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
+    const name=$("#rName").value.trim();
+    if(!name){err("이름(본명)을 입력하십시오.");return}
+    busy=true;$("#rGo").disabled=true;
+    const done=()=>{busy=false;if($("#rGo"))$("#rGo").disabled=false};
+    if(stale||!found){clearTimeout(ft);await lookup()}
+    if(!$("#rMsg"))return; // 그사이 창을 닫은 경우
+    if(!found){err(NET_MSG);done();return}
+    if(pick===null&&found.users.length>1){err("같은 이름의 이용자가 여러 명입니다. 목록에서 선택하십시오.");done();return}
+    const sup=mS.checked;
+    const r=await rpc("admin_reserve",{p_date:D,p_hour:h,p_name:name,p_user_id:pick>0?pick:null,p_ext:uExt,p_super:sup});
+    if(!$("#rMsg"))return;
+    if(!r.ok){
+      err(r.msg);done();
+      if(r.auth){adminExpired();return}
+      if(r.refresh)reloadAdmin();
+      return;
+    }
+    const kind=doneKind(r.ext);
+    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,
+      (r.super?'<p style="text-align:center;margin:12px 0 0"><span class="badge super" style="font-size:14px;padding:2px 10px">슈퍼패스 · 횟수 차감 없음</span></p>':'')+
+      '<p class="hint">'+(pick>0?'예약자는 ‘내 예약’에서 등록된 이름과 비밀번호로 확인·취소할 수 있습니다.':'등록되지 않은 이름이라 ‘내 예약’에서는 보이지 않습니다. 취소는 관리자 예약 목록에서 하십시오.')+'</p>');
+    burst(kind);$("#ok").onclick=closeSheet;
+    reloadAdmin();
   };
 }
 /* 외부 이용자 '처음 오시는 분' 안내: 같은 창 안에서 보여 주고, 뒤로 가면 예약 입력으로 돌아갑니다. */
@@ -441,7 +532,7 @@ function openFirstGuide(h){
    '<div class="card" style="margin-top:14px;text-align:center"><span class="hint" style="margin:0">문의 가능 시간</span><div style="font-weight:700;font-size:17px">'+CONTACT_HOURS+'</div></div>'+
    '<a class="btn call" href="tel:'+PHONE.replace(/\D/g,"")+'">전화 걸기 '+PHONE+'</a>';
   $("#sheet").scrollTop=0;
-  $("#backExt").onclick=()=>openSheet(h,false,"ext");
+  $("#backExt").onclick=()=>openSheet(h,"ext");
 }
 /* 이용자 등록·수정 완료 화면(예약 확정 화면과 같은 효과, 재원생 청록 / 외부 이용자 테라코타) */
 function showUserDone(title,u){
@@ -974,7 +1065,7 @@ function applyAdminTab(){
   document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list")reloadAdmin()}});
 }
 /* 관리자 예약(시간표에서 빈 칸을 눌러 대신 예약). 예약된 칸에는 본명이 보입니다. */
-function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>하루 횟수·외부 이용자 등록 확인 없이 바로 확정됩니다. 단, 정액권·이용권 이용자는 구분·이름·비밀번호가 맞으면 일반 예약처럼 횟수가 차감되고, 다 썼으면 예약되지 않습니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
+function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>일반예약은 일반 이용자와 같은 규칙(재원생 하루 1회, 정액권·이용권 차감)으로, 슈퍼패스는 제한·차감 없이 바로 확정됩니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
 function renderProxy(){
   const dates=allowedDates();
   if(!dates.includes(curDateA))curDateA=dates[0];
@@ -987,11 +1078,11 @@ function renderProxy(){
     return slotCell(s,r?r.name:s.masked);
   });
   $("#pGrid").innerHTML=cells.slice(0,12).join("");$("#pGrid2").innerHTML=cells.slice(12).join("");
-  document.querySelectorAll("#pGrid .slot.free, #pGrid2 .slot.free").forEach(b=>b.onclick=()=>openSheet(+b.dataset.h,true));
+  document.querySelectorAll("#pGrid .slot.free, #pGrid2 .slot.free").forEach(b=>b.onclick=()=>openAdminSheet(+b.dataset.h));
 }
 /* 예약 목록: 앞으로의 예약(가까운 순)과 지난 예약(펼쳐 보기, 최근 순) */
 function resItem(r){
-  return '<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="cancelled"?"status-cancel":"")+'">'+stLabel(r.status)+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="confirmed"&&!r.ended?'<div style="display:flex;gap:6px"><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>';
+  return '<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':"")+(r.super?'<span class="badge super">슈퍼패스</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="cancelled"?"status-cancel":"")+'">'+stLabel(r.status)+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="confirmed"&&!r.ended?'<div style="display:flex;gap:6px"><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>';
 }
 function renderAdmin(){
   if(!A.loaded){$("#adminPane").innerHTML='<p class="hint">불러오는 중입니다…</p>';return}

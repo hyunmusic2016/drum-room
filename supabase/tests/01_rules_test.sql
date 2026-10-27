@@ -149,21 +149,38 @@ select test.ok((public.admin_update_user(jsonb_build_object('id', :stu_uid, 'typ
   'phone', '01000001111', 'edit_prod', jsonb_build_object('start', '2026-10-27', 'days', 45, 'limit', 3))))->'user'->'current'->>'end' = '2026-12-10',
   '정액권 기간·횟수 수정(45일)');
 
--- ===== 11. 관리자 예약·취소 =====
-select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', '3333', true))->>'ok' = 'true', '관리자 대리 예약(미등록 외부 이용자도 가능)');
-select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', '3333', false))->>'msg' like '다른 분이 방금%', '관리자 예약도 중복은 막힘');
-select test.ok((public.admin_reserve('2026-10-27', 10, '남궁민수', '3333', false))->>'msg' like '이미 지난 시간%', '관리자 예약도 지난 시간은 막힘');
-select test.ok((public.admin_reserve('2026-10-27', 18, '남궁민수', '3333', false))->>'prod' is null, '상품 없는 재원생: 관리자 예약은 하루 횟수 제한 없음(006)');
-select (public.admin_reserve('2026-10-27', 16, '김정새', '5555', false))->>'id' as af1 \gset
+-- ===== 11. 관리자 예약(일반예약 / 슈퍼패스, 비밀번호 없음)·취소 (007) =====
+select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', null, true, true))->>'ok' = 'true', '슈퍼패스: 미등록 외부 이용자도 예약');
+select (public.admin_reservations())->'list' @> '[{"name":"남궁민수","super":true}]' as sp \gset
+select test.ok(:'sp', '관리자 목록에 슈퍼패스 표시');
+select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', null, false, true))->>'msg' like '다른 분이 방금%', '슈퍼패스도 중복은 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 10, '남궁민수', null, false, true))->>'msg' like '이미 지난 시간%', '슈퍼패스도 지난 시간은 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 16, '남궁민수', null, true, false))->>'msg' like '등록되지 않은 외부 이용자%', '일반예약: 미등록 외부 이용자 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 16, '박재원', null, false, false))->>'ok' = 'true', '일반예약: 미등록 재원생 1회');
+select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false, false))->>'msg' like '재원생은 하루에 한 번만%', '일반예약: 재원생 2회째 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false, true))->>'ok' = 'true', '슈퍼패스: 재원생 2회째도 예약');
+select test.ok((public.admin_reserve('2026-10-27', 17, '김정새', :ext_uid, false, false))->>'msg' like '선택한 이용자를 찾을 수 없습니다%', '이름과 다른 이용자 번호는 거절');
+select test.ok((public.admin_find_users('김정새', '2026-10-27'))->'users'->0->'product'->>'kind' = 'flat', '이름으로 이용자·정액권 찾기');
+select test.ok((public.admin_find_users('박재원', '2026-10-27'))->>'day_count' = '2' and jsonb_array_length((public.admin_find_users('박재원', '2026-10-27'))->'users') = 0, '미등록 이름: 이용자 없음, 그날 예약 수');
+select (public.admin_reserve('2026-10-27', 17, '김정새', :stu_uid, false, false))->>'id' as af1 \gset
 reset role;
-select test.ok((select product_kind = 'flat' from public.reservations where id = :af1), '정액권 이용자: 관리자 예약도 정액권 차감(006)');
+select test.ok((select product_kind = 'flat' and pw_hash is not null and user_id = :stu_uid from public.reservations where id = :af1), '일반예약: 정액권 차감 + 등록 비밀번호 연결');
 set role authenticated;
-select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', '5555', false))->>'msg' like '정액권 하루 이용 횟수(3회)%', '정액권 하루 횟수를 다 쓰면 관리자 예약도 막힘(006)');
-select test.ok((public.admin_reserve('2026-10-28', 15, '김정새', '1111', false))->>'prod' is null, '비밀번호가 다르면 상품 없이 예약(006)');
-select test.ok((public.admin_reserve('2026-10-27', 17, '김외부', '0000', true))->>'prod' = 'count', '이용권 이용자: 관리자 예약도 이용권 차감(006)');
-select test.ok((public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '이용권 남은 횟수 7-3 = 4(006)');
+select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', :stu_uid, false, false))->>'msg' like '정액권 하루 이용 횟수(3회)%', '일반예약: 정액권 하루 횟수 다 쓰면 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', :stu_uid, false, true))->>'prod' is null, '슈퍼패스: 정액권 차감 없이 예약');
+select test.ok((public.admin_reserve('2026-10-28', 13, '김외부', :ext_uid, false, false))->>'prod' = 'count', '일반예약: 이용권 차감(구분은 등록 정보를 따름)');
+select test.ok((public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '이용권 남은 횟수 7-3 = 4');
+select test.ok((public.admin_reserve('2026-10-28', 14, '김외부', :ext_uid, false, true))->>'prod' is null
+           and (public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '슈퍼패스: 이용권 차감 없음');
+reset role; set role anon;
+select test.ok((public.my_reservations('김외부', '0000'))->'list' @> '[{"date":"2026-10-28","hour":13}]', '등록 이용자의 관리자 예약은 내 예약에서 보임');
+reset role;
+select (select id from public.reservations where name = '박재원' and hour = 16) as pj \gset
+set role anon;
+select test.ok((public.cancel_own(:pj, '박재원', '0000'))->>'msg' = '본인의 예약이 아닙니다.', '비밀번호 없는 예약은 아무 비밀번호로도 취소 불가');
+select test.ok((public.my_reservations('박재원', '0000'))->>'ok' = 'false', '비밀번호 없는 예약은 내 예약에 안 보임');
+reset role; set role authenticated;
 select test.ok((public.admin_cancel(:af1, '시험'))->>'ok' = 'true', '관리자 예약 취소');
-select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', '5555', false))->>'prod' = 'flat', '취소하면 정액권 횟수 돌려받아 다시 예약(006)');
 select test.ok((public.admin_cancel(:e1, '중복'))->>'ok' = 'false', '이미 취소된 예약은 다시 취소 안 됨');
 
 -- ===== 12. 이용 불가 설정 =====
