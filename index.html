@@ -219,7 +219,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.12";
+const APP_VERSION="v0.15.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -974,7 +974,7 @@ function applyAdminTab(){
   document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list")reloadAdmin()}});
 }
 /* 관리자 예약(시간표에서 빈 칸을 눌러 대신 예약). 예약된 칸에는 본명이 보입니다. */
-function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>여기서 한 예약은 하루 횟수·외부 이용자 등록·정액권·이용권 확인 없이 바로 확정됩니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
+function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>하루 횟수·외부 이용자 등록 확인 없이 바로 확정됩니다. 단, 정액권·이용권 이용자는 구분·이름·비밀번호가 맞으면 일반 예약처럼 횟수가 차감되고, 다 썼으면 예약되지 않습니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
 function renderProxy(){
   const dates=allowedDates();
   if(!dates.includes(curDateA))curDateA=dates[0];

@@ -153,6 +153,17 @@ select test.ok((public.admin_update_user(jsonb_build_object('id', :stu_uid, 'typ
 select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', '3333', true))->>'ok' = 'true', '관리자 대리 예약(미등록 외부 이용자도 가능)');
 select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', '3333', false))->>'msg' like '다른 분이 방금%', '관리자 예약도 중복은 막힘');
 select test.ok((public.admin_reserve('2026-10-27', 10, '남궁민수', '3333', false))->>'msg' like '이미 지난 시간%', '관리자 예약도 지난 시간은 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 18, '남궁민수', '3333', false))->>'prod' is null, '상품 없는 재원생: 관리자 예약은 하루 횟수 제한 없음(006)');
+select (public.admin_reserve('2026-10-27', 16, '김정새', '5555', false))->>'id' as af1 \gset
+reset role;
+select test.ok((select product_kind = 'flat' from public.reservations where id = :af1), '정액권 이용자: 관리자 예약도 정액권 차감(006)');
+set role authenticated;
+select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', '5555', false))->>'msg' like '정액권 하루 이용 횟수(3회)%', '정액권 하루 횟수를 다 쓰면 관리자 예약도 막힘(006)');
+select test.ok((public.admin_reserve('2026-10-28', 15, '김정새', '1111', false))->>'prod' is null, '비밀번호가 다르면 상품 없이 예약(006)');
+select test.ok((public.admin_reserve('2026-10-27', 17, '김외부', '0000', true))->>'prod' = 'count', '이용권 이용자: 관리자 예약도 이용권 차감(006)');
+select test.ok((public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '이용권 남은 횟수 7-3 = 4(006)');
+select test.ok((public.admin_cancel(:af1, '시험'))->>'ok' = 'true', '관리자 예약 취소');
+select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', '5555', false))->>'prod' = 'flat', '취소하면 정액권 횟수 돌려받아 다시 예약(006)');
 select test.ok((public.admin_cancel(:e1, '중복'))->>'ok' = 'false', '이미 취소된 예약은 다시 취소 안 됨');
 
 -- ===== 12. 이용 불가 설정 =====
