@@ -219,7 +219,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.14.11";
+const APP_VERSION="v0.14.12";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -291,7 +291,7 @@ async function loadBoard(){ // 여러 번 불러도 가장 나중에 요청한 �
 function slotsFor(d){return board?board.slots.filter(s=>s.date===d):[]}
 
 /* ===== 정액권·이용권(서버가 준 상품 정보) =====
-   상품: {id, kind, target, start, end, limit, total, used, left:{today,tomorrow}(정액권) 또는 {total}(이용권), topups:[{date,add,days}]} */
+   상품: {id, kind, target, start, end, limit, total, used, left:{today,tomorrow}(정액권) 또는 {total}(이용권)} */
 function leftText(q){const t=seoulDate();if(q.start>t)return "시작 예정";const n=spanDays(t,q.end);return n<=0?"기간 종료":n===1?"1일 남음(오늘까지)":n+"일 남음"}
 function prodLeftFor(p,d){if(p.kind==="count")return p.left.total;const t=seoulDate();const v=d===t?p.left.today:d===addDays(t,1)?p.left.tomorrow:null;return v==null?null:v}
 function prodLeftText(p,d){if(p.kind==="count")return "총 "+p.total+"회 중 "+p.left.total+"회 남음";const v=prodLeftFor(p,d);return v==null?"기간 아님":v+"회 남음"}
@@ -443,7 +443,7 @@ function openFirstGuide(h){
   $("#sheet").scrollTop=0;
   $("#backExt").onclick=()=>openSheet(h,false,"ext");
 }
-/* 이용자 등록·수정·충전 완료 화면(예약 확정 화면과 같은 효과, 재원생 청록 / 외부 이용자 테라코타) */
+/* 이용자 등록·수정 완료 화면(예약 확정 화면과 같은 효과, 재원생 청록 / 외부 이용자 테라코타) */
 function showUserDone(title,u){
   const kind=doneKind(u.type==="ext"),col=u.type==="ext"?'--ext-text':'--stu-text',q=u.current;
   $("#sheet").innerHTML='<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2>'+
@@ -461,7 +461,7 @@ function histHtml(resList,oldProds){
   const st=x=>x.status==="cancelled"?'<span class="status-cancel">취소</span>'+(x.reason?' · '+esc(x.reason):''):(x.ended?'이용 시간 지남':'예약 확정');
   const rItems=rs.map(x=>'<div class="item"><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':'')+'<div class="hint">'+st(x)+'</div></div>').join("");
   const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
-  const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+q.used+'회 사용'+(q.topups&&q.topups.length?'(충전 '+q.topups.length+'번 포함)':''):'하루 '+q.limit+'회')+' · 만료</div></div>').join("");
+  const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+q.used+'회 사용':'하루 '+q.limit+'회')+' · 만료</div></div>').join("");
   return '<p class="hint" style="margin-top:14px">예약 기록과 지난 정액권·이용권은 '+KEEP_MONTHS+'개월 동안 보관된 뒤 삭제됩니다.</p>'+
     '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
     '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
@@ -807,8 +807,7 @@ function userViewHtml(){
       kv("남은 기간",leftText(c))+
       (c.kind==="count"
         ?kv("총 이용 횟수",c.total+"회")+kv("사용한 횟수",c.used+"회")+kv("남은 횟수",c.left.total+"회")
-        :kv("하루 이용 횟수",c.limit+"회")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>'+
-      (c.kind==="count"?topupHtml(c):'');
+        :kv("하루 이용 횟수",c.limit+"회")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>';
   }else{
     prod='<p class="hint" style="margin:0">사용 중인 정액권·이용권이 없습니다.</p>'+(q?'<p class="hint">지난 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+' 만료</p>':'');
   }
@@ -819,11 +818,6 @@ function userViewHtml(){
     '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
     '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
     '<div style="margin-top:22px">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div></div>';
-}
-/* 이용권 충전 기록(충전 기능은 v0.14.11에서 화면에서 뺌, 예전 기록만 표시) */
-function topupHtml(c){
-  const tu=c.topups||[];
-  return tu.length?'<div class="kv"><span>충전 기록</span><b>'+tu.map(x=>x.date+' +'+x.add+'회 ('+x.days+'일)').join('<br>')+'</b></div>':'';
 }
 function bindUserView(){
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
