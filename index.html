@@ -213,7 +213,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
   <section id="v-book">
     <div class="tabs" id="dayTabs" role="tablist"></div>
     <div id="bookMsg" role="status"></div>
-    <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div>
+    <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">횟수권</i></span></div>
     <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
     <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (정액권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
   </section>
@@ -253,7 +253,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.13";
+const APP_VERSION="v0.17.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -261,8 +261,8 @@ const SUPABASE_KEY="sb_publishable_EuDlhpMAm69J4qB0pMFVYA_bh5RWzo2";
 const DAYS_KO=["일","월","화","수","목","금","토"];
 const PHONE="010-7753-8730";
 const CONTACT_HOURS="매일 오전 9시 ~ 밤 10시"; // 문의 가능 시간(학원 운영에 맞게 수정)
-const PROD={flat:"정액권",count:"이용권"};
-const PERIOD_DAYS=30;  // 정액권·이용권 기본 기간(일)
+const PROD={flat:"정액권",count:"횟수권"};
+const PERIOD_DAYS=30;  // 정액권·횟수권 기본 기간(일)
 const KEEP_DAYS=30;   // 지난 예약·만료된 상품 보관 기간(일). 서버가 이 기간이 지나면 자동 삭제합니다(009).
 /* 외부 이용자 등록 완료 안내 문구(단문 SMS 90바이트 이하). */
 const EXT_REG_SMS="등록이 완료되었습니다.\n외부 이용자 예약하기에서 성함과 전화번호 뒤 4자리로 예약하십시오.";
@@ -324,8 +324,8 @@ async function loadBoard(){ // 여러 번 불러도 가장 나중에 요청한 �
 }
 function slotsFor(d){return board?board.slots.filter(s=>s.date===d):[]}
 
-/* ===== 정액권·이용권(서버가 준 상품 정보) =====
-   상품: {id, kind, target, start, end, limit, total, used, left:{today,tomorrow}(정액권) 또는 {total}(이용권)} */
+/* ===== 정액권·횟수권(서버가 준 상품 정보) =====
+   상품: {id, kind, target, start, end, limit, total, used, left:{today,tomorrow}(정액권) 또는 {total}(횟수권)} */
 function leftText(q){const t=seoulDate();if(q.start>t)return "시작 예정";const n=spanDays(t,q.end);return n<=0?"기간 종료":n===1?"1일 남음(오늘까지)":n+"일 남음"}
 function prodLeftFor(p,d){if(p.kind==="count")return p.left.total;const t=seoulDate();const v=d===t?p.left.today:d===addDays(t,1)?p.left.tomorrow:null;return v==null?null:v}
 function prodLeftText(p,d){if(p.kind==="count")return "총 "+p.total+"회 중 "+p.left.total+"회 남음";const v=prodLeftFor(p,d);return v==null?"기간 아님":v+"회 남음"}
@@ -412,7 +412,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
    ('<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
    '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
    ('<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
-   ('<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소를 위한 이름·비밀번호 수집에 동의합니다. 예약 기록은 이용일로부터 '+KEEP_DAYS+'일 뒤 삭제됩니다(정액권·이용권 예약은 상품 종료 '+KEEP_DAYS+'일 뒤).</span></label>')+
+   ('<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소를 위한 이름·비밀번호 수집에 동의합니다. 예약 기록은 이용일로부터 '+KEEP_DAYS+'일 뒤 삭제됩니다(정액권·횟수권 예약은 상품 종료 '+KEEP_DAYS+'일 뒤).</span></label>')+
    '<div id="rMsg"></div><button class="btn'+(EXT?' ext':' stu')+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
   $("#backCh").onclick=openChooser;
@@ -455,8 +455,8 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
 /* 관리자 예약(v0.16.0): 비밀번호 없이 이름으로 예약. 이름을 넣으면 등록 이용자를 찾아 보여 주고(동명이인은 선택),
    일반예약(일반 이용자와 같은 규칙) / 슈퍼패스(제한·차감 없음) 중 하나를 고릅니다. 최종 판단은 서버(admin_reserve). */
 const MODE_HELP={
-  normal:"일반 이용자와 같은 규칙으로 예약합니다. 재원생은 하루 1회까지, 정액권·이용권 이용자는 횟수가 차감되고 다 쓰면 예약되지 않습니다. 상품이 없는 외부 이용자는 횟수 제한이 없고, 등록되지 않은 외부 이용자는 예약할 수 없습니다.",
-  super:"하루 횟수, 이용자 등록, 정액권·이용권 확인 없이 바로 확정합니다. 정액권·이용권 횟수도 차감되지 않습니다. 이미 예약된 시간, 지난 시간, 이용 불가 시간만 막습니다."
+  normal:"일반 이용자와 같은 규칙으로 예약합니다. 재원생은 하루 1회까지, 정액권·횟수권 이용자는 횟수가 차감되고 다 쓰면 예약되지 않습니다. 상품이 없는 외부 이용자는 횟수 제한이 없고, 등록되지 않은 외부 이용자는 예약할 수 없습니다.",
+  super:"하루 횟수, 이용자 등록, 정액권·횟수권 확인 없이 바로 확정합니다. 정액권·횟수권 횟수도 차감되지 않습니다. 이미 예약된 시간, 지난 시간, 이용 불가 시간만 막습니다."
 };
 function whoInfo(u,D){
   const p=u.product;
@@ -563,7 +563,7 @@ function showUserDone(title,u){
     '<button class="btn" id="ok">확인</button>';
   $("#bg").classList.add("open");burst(kind);$("#ok").onclick=closeSheet;$("#ok").focus();
 }
-/* 예약 기록·만료된 정액권·이용권(펼쳐 보기). 관리자 이용자 정보와 내 예약에서 함께 씁니다. 최신순.
+/* 예약 기록·만료된 정액권·횟수권(펼쳐 보기). 관리자 이용자 정보와 내 예약에서 함께 씁니다. 최신순.
    서버가 보관 기간(30일) 안의 기록만 보내 줍니다. */
 function histHtml(resList,oldProds){
   const rs=[...resList].sort((a,b)=>(b.date+String(b.hour).padStart(2,"0")).localeCompare(a.date+String(a.hour).padStart(2,"0")));
@@ -571,9 +571,9 @@ function histHtml(resList,oldProds){
   const rItems=rs.map(x=>'<div class="item"><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':'')+'<div class="hint">'+st(x)+'</div></div>').join("");
   const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
   const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+q.used+'회 사용':'하루 '+q.limit+'회')+' · 만료</div></div>').join("");
-  return '<p class="hint" style="margin-top:14px">예약 기록과 만료된 정액권·이용권은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
+  return '<p class="hint" style="margin-top:14px">예약 기록과 만료된 정액권·횟수권은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
     '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
-    '<details class="hist"><summary>만료된 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
+    '<details class="hist"><summary>만료된 정액권·횟수권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·횟수권이 없습니다.</p>')+'</details>';
 }
 function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.remove("daycol");$("#sheet").classList.add("done",k);return k}
 const CONFETTI={stu:["#0e9194","#5fd4d6","#0a6f72","#9fe3e4"],ext:["#9C5238","#e0a48c","#c27a5c","#f2c9b4"]};
@@ -819,7 +819,7 @@ function readNum(id,max,label){
 }
 function limRead(p){const r=readNum(p+"Lim",99,"하루 이용 횟수");return r.ok?{ok:true,limit:r.n}:r}
 function totRead(p){const r=readNum(p+"Tot",999,"총 이용 횟수");return r.ok?{ok:true,total:r.n}:r}
-/* 정액권·이용권 입력 칸은 이 함수들 하나로 그립니다. 이용자 등록, 이용자 수정(새로 추가·기존 상품 수정)이 모두 같은 칸을 쓰므로
+/* 정액권·횟수권 입력 칸은 이 함수들 하나로 그립니다. 이용자 등록, 이용자 수정(새로 추가·기존 상품 수정)이 모두 같은 칸을 쓰므로
    여기만 고치면 세 곳이 함께 바뀝니다(사용자 요청: 등록 폼이 바뀌면 수정 폼도 똑같이).
    prodPeriodFields: 시작일 | 기간 (일) | 하루 또는 총 이용 횟수 + "종료일: … (N일)" 표시 */
 function prodPeriodFields(p,start,days,qty){
@@ -827,9 +827,9 @@ function prodPeriodFields(p,start,days,qty){
 }
 function bindPeriod(p){const updEnd=()=>{const s=$("#"+p+"Start").value,d=daysVal(p+"Days");$("#"+p+"End").textContent=s&&d?periodText(s,d):""};$("#"+p+"Start").oninput=updEnd;$("#"+p+"Days").oninput=updEnd;updEnd();return updEnd}
 function readPeriod(p){const start=$("#"+p+"Start").value,days=daysVal(p+"Days");return start&&days?{start,days}:{err:"시작일과 기간(일)을 확인하십시오. 기간은 1 이상의 숫자로 입력하십시오."}}
-/* 정액권·이용권 새로 추가하는 칸(종류 없음/정액권/이용권 + 시작일·기간·횟수). */
+/* 정액권·횟수권 새로 추가하는 칸(종류 없음/정액권/횟수권 + 시작일·기간·횟수). */
 function newProdFields(p,type){
-  return '<label for="'+p+'Kind" style="margin-top:0">종류</label><select id="'+p+'Kind" style="width:100%"><option value="none">없음</option><option value="flat">정액권 (기간 동안 하루 N회)</option><option value="count"'+(type==="stu"?' disabled':'')+'>이용권 (기간 동안 총 N회, 외부 이용자 전용)</option></select>'+
+  return '<label for="'+p+'Kind" style="margin-top:0">종류</label><select id="'+p+'Kind" style="width:100%"><option value="none">없음</option><option value="flat">정액권 (기간 동안 하루 N회)</option><option value="count"'+(type==="stu"?' disabled':'')+'>횟수권 (기간 동안 총 N회, 외부 이용자 전용)</option></select>'+
     '<div id="'+p+'Prod" class="hidden">'+prodPeriodFields(p,seoulDate(),PERIOD_DAYS)+'</div>';
 }
 function bindNewProd(p,isExt){
@@ -854,7 +854,7 @@ function readNewProd(p){ // {kind:"none"} 또는 {kind,start,days,limit,total} �
 function userHtml(){
   return '<div class="card"><b>이용자 등록</b>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
     typeChecks("u","ext")+userFields("u")+
-    '<div class="part" style="margin-top:22px">정액권·이용권</div>'+newProdFields("u","ext")+
+    '<div class="part" style="margin-top:22px">정액권·횟수권</div>'+newProdFields("u","ext")+
     '<div id="uMsg"></div><button class="btn" id="uGo">이용자 등록</button></div>'+
     '<div class="card"><b>등록 안내 문자</b>'+
     '<div class="smsbox">'+esc(EXT_REG_SMS)+'</div>'+
@@ -866,7 +866,7 @@ function bindUser(){
     $("#smsMsg").textContent=ok?"복사되었습니다. 문자 앱에 붙여 넣어 보내십시오.":"자동 복사가 되지 않았습니다. 위 문구를 길게 눌러 직접 복사하십시오.";
   };
   if(!$("#uGo"))return;
-  const sync=bindNewProd("u",()=>$("#uT2").checked); // 재원생이면 이용권 선택 불가, 종류에 따라 하루/총 횟수 칸 전환
+  const sync=bindNewProd("u",()=>$("#uT2").checked); // 재원생이면 횟수권 선택 불가, 종류에 따라 하루/총 횟수 칸 전환
   bindTypeChecks("u",sync);
   $("#uGo").onclick=async()=>{
     const err=m=>{uFlash="";const ok=$("#sec-ext .card .msg.ok");if(ok)ok.remove();$("#uMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
@@ -882,7 +882,7 @@ function bindUser(){
   };
 }
 
-/* ===== 설정 > 이용자 현황: 정액권 / 이용권 / 일반(상품 없음) =====
+/* ===== 설정 > 이용자 현황: 정액권 / 횟수권 / 일반(상품 없음) =====
    종료일이 지나지 않은 상품(시작 전 포함)이 있으면 그 상품 칸, 없으면 일반 칸. 기간이 끝나면 자동으로 일반으로 내려옵니다.
    상품 칸은 상품 등록 순, 일반 칸은 이용자 등록 순으로 최근이 위. 사용만료·블랙리스트 이용자는 여기 보이지 않습니다. */
 function statusGroups(){
@@ -899,10 +899,10 @@ function statusItem(u,kind){
     '<div style="display:flex;gap:6px;flex:none;align-items:center"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+u.id+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
 function statusHtml(){
-  // 정액권·이용권·일반을 각각 따로 된 상자로 보여 줍니다.
+  // 정액권·횟수권·일반을 각각 따로 된 상자로 보여 줍니다.
   const g=statusGroups(),sec=(k,title)=>'<div class="card"><div class="part" style="margin-top:0">'+title+'<small>'+g[k].length+'명</small></div>'+(g[k].length?g[k].map(x=>statusItem(x,k)).join(""):'<p class="hint">해당하는 이용자가 없습니다.</p>')+'</div>';
   return '<h2 style="margin:4px 0 6px">이용자 현황</h2>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
-    sec("flat","정액권")+sec("count","이용권")+sec("none","일반");
+    sec("flat","정액권")+sec("count","횟수권")+sec("none","일반");
 }
 function callUser(u){
   if(!u||!u.phone)return;
@@ -919,7 +919,7 @@ function bindStatus(){
     callUser(A.users.find(u=>u.id===+b.dataset.sc));
   });
 }
-/* 이용자 정보(읽기 전용): 수정 화면과 같은 배치 + 현재 정액권·이용권 + [수정] */
+/* 이용자 정보(읽기 전용): 수정 화면과 같은 배치 + 현재 정액권·횟수권 + [수정] */
 function userViewHtml(){
   const D=A.detail,u=D.user,q=u.last,c=u.current,col=u.type==="ext"?'--ext-text':'--stu-text',t=seoulDate();
   const ro=(label,v)=>'<div><label>'+label+'</label><div class="ro">'+(v?esc(v):'<span class="hint" style="margin:0">없음</span>')+'</div></div>';
@@ -933,20 +933,20 @@ function userViewHtml(){
         ?kv("총 이용 횟수",c.total+"회")+kv("사용한 횟수",c.used+"회")+kv("남은 횟수",c.left.total+"회")
         :kv("하루 이용 횟수",c.limit+"회")+kv("오늘 남은 횟수",prodLeftText(c,t).replace(" 남음",""))+kv("내일 남은 횟수",prodLeftText(c,addDays(t,1)).replace(" 남음","")))+'</div>';
   }else{
-    prod='<p class="hint" style="margin:0">사용 중인 정액권·이용권이 없습니다.</p>'+(q?'<p class="hint">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'');
+    prod='<p class="hint" style="margin:0">사용 중인 정액권·횟수권이 없습니다.</p>'+(q?'<p class="hint">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'');
   }
   return '<div class="card"><b>이용자 정보</b><div style="margin-top:6px"><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span></div>'+
     '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
-    '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
+    '<div class="part" style="margin-top:22px">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
     '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
     '<div style="margin-top:22px">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div></div>';
 }
 function bindUserView(){
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
 }
-/* 이용자 수정(이용자 정보 + 정액권·이용권을 한 화면에서) */
+/* 이용자 수정(이용자 정보 + 정액권·횟수권을 한 화면에서) */
 function userEditHtml(){
   const u=A.detail.user,q=u.last,c=u.current;
   let prod;
@@ -960,8 +960,8 @@ function userEditHtml(){
   }
   return '<div class="card"><b>이용자 수정</b>'+typeChecks("ue",u.type)+
     userFields("ue",u)+
-    '<div class="part" style="margin-top:22px">정액권·이용권<small>'+(c?PROD[c.kind]+' 사용 중':'없음 · 새로 추가할 수 있습니다')+'</small></div>'+prod+
-    '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약과 정액권·이용권에도 동일하게 적용됩니다.</p><div id="ueMsg"></div><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button>'+
+    '<div class="part" style="margin-top:22px">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음 · 새로 추가할 수 있습니다')+'</small></div>'+prod+
+    '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약과 정액권·횟수권에도 동일하게 적용됩니다.</p><div id="ueMsg"></div><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button>'+
     (c?'<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:4px"><button class="btn danger" id="eStop">'+PROD[c.kind]+' 종료</button><p class="hint">종료하면 오늘부터 이 '+PROD[c.kind]+'으로 예약할 수 없고, 이용자 현황에서 일반으로 옮겨집니다. 이미 확정된 예약은 그대로 유지됩니다.</p></div>':'')+'</div>';
 }
 function bindUserEdit(){
@@ -983,7 +983,7 @@ function bindUserEdit(){
     };
   }
   const syncNew=c?null:bindNewProd("ue",()=>$("#ueT2").checked);
-  bindTypeChecks("ue",()=>{if(syncNew)syncNew()}); // 재원생으로 바꾸면 새 이용권 선택 불가
+  bindTypeChecks("ue",()=>{if(syncNew)syncNew()}); // 재원생으로 바꾸면 새 횟수권 선택 불가
   $("#ueSave").onclick=async()=>{
     const err=m=>{$("#ueMsg").innerHTML='<div class="msg err">'+esc(m)+'</div>'};
     const f=readUserFields("ue",false);if(f.err){err(f.err);return}
@@ -1098,7 +1098,7 @@ function applyAdminTab(){
   document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list")reloadAdmin()}});
 }
 /* 관리자 예약(시간표에서 빈 칸을 눌러 대신 예약). 예약된 칸에는 본명이 보입니다. */
-function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>일반예약은 일반 이용자와 같은 규칙(재원생 하루 1회, 정액권·이용권 차감)으로, 슈퍼패스는 제한·차감 없이 바로 확정됩니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">이용권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
+function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>일반예약은 일반 이용자와 같은 규칙(재원생 하루 1회, 정액권·횟수권 차감)으로, 슈퍼패스는 제한·차감 없이 바로 확정됩니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">횟수권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
 function renderProxy(){
   const dates=allowedDates();
   if(!dates.includes(curDateA))curDateA=dates[0];

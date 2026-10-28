@@ -73,12 +73,12 @@ set role authenticated;
 select test.ok((public.admin_users())->>'ok' = 'true', '관리자는 이용자 목록 조회 가능');
 select test.denied('select * from public.users', '관리자도 표는 직접 못 읽음(함수로만)');
 
--- ===== 6. 이용자 등록 + 이용권 =====
+-- ===== 6. 이용자 등록 + 횟수권 =====
 select test.ok((public.admin_create_user('{"type":"ext","name":"김외부","pw":"0000","phone":"01000000000","part":"드럼","memo":"",
-  "prod":{"kind":"count","start":"2026-10-27","days":30,"total":2}}'))->>'ok' = 'true', '외부 이용자 + 이용권(총 2회) 등록');
+  "prod":{"kind":"count","start":"2026-10-27","days":30,"total":2}}'))->>'ok' = 'true', '외부 이용자 + 횟수권(총 2회) 등록');
 select test.ok((public.admin_create_user('{"type":"ext","name":"김외부","pw":"0000","phone":"01000000000"}'))->>'msg' like '같은 이름과 비밀번호%', '같은 이름+비밀번호 중복 등록 막힘');
 select test.ok((public.admin_create_user('{"type":"ext","name":"김외부","pw":"9999","phone":"0123"}'))->>'msg' like '전화번호%', '전화번호 형식 확인');
-select test.ok((public.admin_create_user('{"type":"stu","name":"김재원","pw":"1234","phone":"01011112222","prod":{"kind":"count","start":"2026-10-27","days":30,"total":5}}'))->>'msg' like '재원생은 정액권만%', '재원생 이용권 등록 막힘');
+select test.ok((public.admin_create_user('{"type":"stu","name":"김재원","pw":"1234","phone":"01011112222","prod":{"kind":"count","start":"2026-10-27","days":30,"total":5}}'))->>'msg' like '재원생은 정액권만%', '재원생 횟수권 등록 막힘');
 select test.ok(not exists (select 1 from jsonb_array_elements((public.admin_users())->'users') u where u->>'name' = '김재원'), '상품이 막히면 이용자도 저장 안 됨');
 select test.ok(((public.admin_users())->'users'->0->'current'->>'end') = '2026-11-25', '30일 = 시작일 + 29일');
 reset role;
@@ -90,15 +90,15 @@ select test.ok((public.product_info('ext', '김외부', '1111'))->'product' = 'n
 select test.ok((public.product_info('ext', '김외부', '0000'))->'product'->>'kind' = 'count', '이름+비밀번호가 맞으면 상품 정보');
 select test.ok((public.product_info('ext', '김외부', '0000'))->'product'->>'target' = 'ext', '상품 정보에 대상 구분(ext) 포함');
 select (public.reserve('2026-10-27', 17, '김외부', '0000', true, 'ext'))->>'id' as e1 \gset
-select test.ok(:e1 > 0, '이용권으로 예약 1');
+select test.ok(:e1 > 0, '횟수권으로 예약 1');
 select test.ok((public.reserve('2026-10-27', 19, '김외부', '0000', true, 'ext'))->>'prod' = 'count', '외부 이용자는 하루 제한 없음(같은 날 2번째)');
-select test.ok((public.reserve('2026-10-28', 10, '김외부', '0000', true, 'ext'))->>'msg' like '이용권 횟수(2회)를 모두%', '이용권 횟수 다 쓰면 막힘');
+select test.ok((public.reserve('2026-10-28', 10, '김외부', '0000', true, 'ext'))->>'msg' like '횟수권 2회를 모두%', '횟수권 횟수 다 쓰면 막힘');
 select test.ok((public.cancel_own(:e1, '김외부', '1111'))->>'msg' = '본인의 예약이 아닙니다.', '비밀번호 틀리면 취소 불가');
 select test.ok((public.cancel_own(:e1, '김외부', '0000'))->>'ok' = 'true', '본인 취소');
-select test.ok((public.my_reservations('김외부', '0000'))->'product'->'left'->>'total' = '1', '취소하면 이용권 횟수 돌려받음');
+select test.ok((public.my_reservations('김외부', '0000'))->'product'->'left'->>'total' = '1', '취소하면 횟수권 횟수 돌려받음');
 select test.ok((public.reserve('2026-10-28', 10, '김외부', '0000', true, 'ext'))->>'ok' = 'true', '돌려받은 횟수로 다시 예약');
 
--- ===== 7. 이용권 충전 =====
+-- ===== 7. 횟수권 충전 =====
 reset role; set role authenticated;
 select test.ok((public.admin_topup(:ext_pid, 5, 30))->'user'->'current'->>'total' = '7', '충전: 총 2 + 5 = 7회');
 select test.ok((public.admin_topup(:ext_pid, 995, 30))->>'msg' like '총 이용 횟수는 999회%', '충전 후 999회 초과 막힘');
@@ -146,7 +146,7 @@ select test.ok((public.my_reservations('김정새', '5555'))->>'ok' = 'true' and
 select test.ok((public.my_reservations('김정액', '0000'))->>'ok' = 'false', '옛 이름·비밀번호로는 조회 안 됨');
 reset role; set role authenticated;
 select test.ok((public.admin_update_user(jsonb_build_object('id', :ext_uid, 'type', 'stu', 'name', '김외부',
-  'phone', '01000000000')))->>'msg' like '재원생은 이용권을 사용할 수 없습니다%', '이용권 사용 중인 외부 이용자를 재원생으로 변경 막힘');
+  'phone', '01000000000')))->>'msg' like '재원생은 횟수권을 사용할 수 없습니다%', '횟수권 사용 중인 외부 이용자를 재원생으로 변경 막힘');
 select test.ok((public.admin_update_user(jsonb_build_object('id', :stu_uid, 'type', 'stu', 'name', '김정새',
   'phone', '01000001111', 'edit_prod', jsonb_build_object('start', '2026-10-27', 'days', 45, 'limit', 3))))->'user'->'current'->>'end' = '2026-12-10',
   '정액권 기간·횟수 수정(45일)');
@@ -170,10 +170,10 @@ select test.ok((select product_kind = 'flat' and pw_hash is not null and user_id
 set role authenticated;
 select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', :stu_uid, false, false))->>'msg' like '정액권 하루 이용 횟수(3회)%', '일반예약: 정액권 하루 횟수 다 쓰면 막힘');
 select test.ok((public.admin_reserve('2026-10-27', 20, '김정새', :stu_uid, false, true))->>'prod' is null, '슈퍼패스: 정액권 차감 없이 예약');
-select test.ok((public.admin_reserve('2026-10-28', 13, '김외부', :ext_uid, false, false))->>'prod' = 'count', '일반예약: 이용권 차감(구분은 등록 정보를 따름)');
-select test.ok((public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '이용권 남은 횟수 7-3 = 4');
+select test.ok((public.admin_reserve('2026-10-28', 13, '김외부', :ext_uid, false, false))->>'prod' = 'count', '일반예약: 횟수권 차감(구분은 등록 정보를 따름)');
+select test.ok((public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '횟수권 남은 횟수 7-3 = 4');
 select test.ok((public.admin_reserve('2026-10-28', 14, '김외부', :ext_uid, false, true))->>'prod' is null
-           and (public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '슈퍼패스: 이용권 차감 없음');
+           and (public.admin_user(:ext_uid))->'user'->'current'->'left'->>'total' = '4', '슈퍼패스: 횟수권 차감 없음');
 reset role; set role anon;
 select test.ok((public.my_reservations('김외부', '0000'))->'list' @> '[{"date":"2026-10-28","hour":13}]', '등록 이용자의 관리자 예약은 내 예약에서 보임');
 reset role;
@@ -187,9 +187,9 @@ select test.ok((public.admin_cancel(:e1, '중복'))->>'ok' = 'false', '이미 �
 
 -- ===== 11-2. 동명이인 재원생 하루 1회 (008) =====
 select test.ok((public.admin_create_user('{"type":"ext","name":"이강현","pw":"1111","phone":"01011110000",
-  "prod":{"kind":"count","start":"2026-10-27","days":30,"total":5}}'))->>'ok' = 'true', '이용권 이용자 이강현 등록');
+  "prod":{"kind":"count","start":"2026-10-27","days":30,"total":5}}'))->>'ok' = 'true', '횟수권 이용자 이강현 등록');
 reset role; set role anon;
-select test.ok((public.reserve('2026-10-28', 1, '이강현', '1111', true, 'ext'))->>'prod' = 'count', '이용권 이강현 예약');
+select test.ok((public.reserve('2026-10-28', 1, '이강현', '1111', true, 'ext'))->>'prod' = 'count', '횟수권 이강현 예약');
 select test.ok((public.reserve('2026-10-28', 2, '이강현', '2222', true, 'stu'))->>'ok' = 'true', '재원생 이강현은 등록 이용자 이강현의 예약과 관계없이 예약(008)');
 select test.ok((public.reserve('2026-10-28', 3, '이강현', '3333', true, 'stu'))->>'msg' like '하루에 한 번만%', '미등록 재원생은 같은 이름끼리 하루 1회(비밀번호 바꿔도 막힘)');
 select test.ok((public.reserve('2026-10-28', 3, '김정새', '9999', true, 'stu'))->>'ok' = 'true', '정액권 재원생 김정새와 동명이인 재원생도 예약(008)');
@@ -199,7 +199,7 @@ select test.ok((public.admin_find_users('이강현', '2026-10-28'))->>'day_taken
            and (public.admin_find_users('이강현', '2026-10-28'))->'users'->0->>'day_taken' = 'false', '관리자 이름 찾기: 미등록 재원생 쪽만 예약 있음');
 select test.ok((public.admin_reserve('2026-10-28', 5, '이강현', null, false, false))->>'msg' like '재원생은 하루에 한 번만%', '관리자 일반예약: 미등록 재원생 이강현 2회째 막힘');
 select (public.admin_find_users('이강현', '2026-10-28'))->'users'->0->>'id' as lkh \gset
-select test.ok((public.admin_reserve('2026-10-28', 5, '이강현', :lkh, false, false))->>'prod' = 'count', '관리자 일반예약: 이용권 이강현은 따로 예약');
+select test.ok((public.admin_reserve('2026-10-28', 5, '이강현', :lkh, false, false))->>'prod' = 'count', '관리자 일반예약: 횟수권 이강현은 따로 예약');
 reset role; set role anon;
 select (select (x->>'id')::bigint from jsonb_array_elements((public.my_reservations('이강현', '2222'))->'list') x) as sk \gset
 select test.ok((public.move_own(:sk, '이강현', '2222', '2026-10-28', 6))->>'ok' = 'true', '동명이인 이용자 예약이 있어도 시간 변경 가능(008)');
@@ -220,7 +220,7 @@ select test.ok((public.admin_unblock(:'gid'))->>'ok' = 'true', '이용 불가 �
 -- ===== 13. 사용만료 =====
 select test.ok((public.admin_set_status(:ext_uid, 'expired'))->'user'->>'status' = 'expired', '사용만료 처리');
 reset role;
-select test.ok(not exists (select 1 from public.products where id = :ext_pid), '사용만료: 오늘 시작한 이용권은 삭제');
+select test.ok(not exists (select 1 from public.products where id = :ext_pid), '사용만료: 오늘 시작한 횟수권은 삭제');
 set role anon;
 select test.ok((public.reserve('2026-10-28', 13, '김외부', '0000', true, 'ext'))->>'msg' like '등록된 외부 이용자%', '사용만료된 외부 이용자는 예약 불가');
 reset role; set role authenticated;
