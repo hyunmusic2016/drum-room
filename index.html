@@ -231,7 +231,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 
   <section id="v-mine" class="hidden">
     <h2>내 예약 확인</h2>
-    <div class="card">
+    <div class="card" id="mForm">
       <label for="mName">이름</label>
       <input type="text" id="mName" autocomplete="off" placeholder="예약할 때 입력한 이름">
       <label for="mPw">비밀번호 4자리</label>
@@ -264,7 +264,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.4";
+const APP_VERSION="v0.18.5";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -683,7 +683,7 @@ const IDLE_MS=120000;let lastAct=Date.now();
 function idleReset(){
   closeSheet();$("#sheet").innerHTML="";
   $("#aEmail").value="";$("#aPw").value="";
-  mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mFind").disabled=false;
+  mineReset();
   curDate=null;go("book");window.scrollTo(0,0);if(document.activeElement)document.activeElement.blur();
 }
 setInterval(()=>{
@@ -697,13 +697,17 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 let mine=null,mineSeq=0; // 마지막으로 조회한 이름·비밀번호와 결과
 $("#mName").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#mPw").focus()}});
 $("#mPw").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("#mFind").click()}});
+// 이름이 있고 비밀번호 4자리를 다 치면 바로 조회(v0.18.5)
+$("#mPw").addEventListener("input",()=>{if(/^\d{4}$/.test($("#mPw").value)&&$("#mName").value.trim()&&!$("#mFind").disabled)$("#mFind").click()});
+/* 조회에 성공하면 입력 칸을 숨기고 결과 화면으로(v0.18.5). [← 다시 조회]는 입력값을 지우고 입력 화면으로 돌아갑니다. */
+function mineReset(){mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mFind").disabled=false;$("#mForm").classList.remove("hidden")}
 $("#mFind").onclick=async()=>{
   const name=$("#mName").value,pw=$("#mPw").value;
   const my=++mineSeq;$("#mFind").disabled=true;
   const r=await rpc("my_reservations",{p_name:name,p_pw:pw});
   if(my!==mineSeq)return; // 더 나중에 요청한 조회가 있으면 이 결과는 버립니다.
   $("#mFind").disabled=false;
-  if(!r.ok){mine=null;$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
+  if(!r.ok){mine=null;$("#mForm").classList.remove("hidden");$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
   setServerNow(r.now);mine={name,pw,r};
   let h="";
   if(r.product){
@@ -716,7 +720,10 @@ $("#mFind").onclick=async()=>{
   if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
   h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="cancelled"?"status-cancel":"")+'">'+stLabel(x.status)+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="confirmed"&&!x.started?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">예약 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
   const hasUp=now.some(x=>x.status==="confirmed");
-  $("#mOut").innerHTML='<div class="card">'+(hasUp?'<div id="mCodes"></div>':'')+h+'</div>'+histHtml(r.list,r.old_products||[]);
+  $("#mForm").classList.add("hidden");
+  $("#mOut").innerHTML='<button class="btn ghost small" id="mBack" style="margin-bottom:10px">← 다시 조회</button>'+
+    '<div class="card">'+(hasUp?'<div id="mCodes"></div>':'')+h+'</div>'+histHtml(r.list,r.old_products||[]);
+  $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m));
   document.querySelectorAll("[data-c]").forEach(b=>b.onclick=async()=>{
