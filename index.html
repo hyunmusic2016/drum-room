@@ -143,8 +143,9 @@ details.dgrp[open]>.dgrp-h::after{content:"▴"}
 .idpw>div{min-width:0}
 div#rBadge:not(:empty){margin-top:6px}
 /* 내 예약 결과 맨 위: 이름 + 구분 배지 + 정액권/횟수권 배지(v0.18.8) */
-.mhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
-.mhead b{font-size:20px;font-weight:900;margin-right:2px}
+.mhead{text-align:center;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
+.mhead b{display:block;font-size:22px;font-weight:900}
+.mhead .bdg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:4px}
 .mhead .badge{margin-left:0}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
 .who input{width:20px;height:20px;margin:0;flex:none}
@@ -163,7 +164,7 @@ div#rBadge:not(:empty){margin-top:6px}
 @media(prefers-reduced-motion:reduce){.sheet{animation:none}}
 .item{border-top:1px solid var(--line);padding:12px 0}
 .item:first-child{border-top:0}
-.part+.item{border-top:0}
+.part+.item,.mhead+.item{border-top:0}
 .status-cancel{color:var(--danger);font-weight:700}
 .tbl{overflow-x:auto}
 .rules ul{padding-left:20px;margin:8px 0 0}
@@ -272,7 +273,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.8";
+const APP_VERSION="v0.18.9";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -731,12 +732,12 @@ $("#mFind").onclick=async()=>{
   const hasUp=now.some(x=>x.status==="confirmed");
   // 구분: 등록 이용자면 서버가 준 구분(012), 아니면 상품 대상 → 가장 최근 예약의 구분
   const last=r.list[r.list.length-1],ut=r.user_type||(r.product&&r.product.target)||(last?(last.ext?"ext":"stu"):null);
-  const head='<div class="mhead"><b>'+esc(name.replace(/\s+/g,""))+'</b>'+
+  const head='<div class="mhead"><b>'+esc(name.replace(/\s+/g,""))+'</b><div class="bdg">'+
     (ut?'<span class="badge" style="color:var('+(ut==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(ut)+'</span>':'')+
-    (r.product?'<span class="badge '+r.product.kind+'">'+PROD[r.product.kind]+'</span>':'')+'</div>';
+    (r.product?'<span class="badge '+r.product.kind+'">'+PROD[r.product.kind]+'</span>':'')+'</div></div>';
   $("#mForm").classList.add("hidden");
   $("#mOut").innerHTML='<button class="btn ghost small" id="mBack" style="margin-bottom:10px">← 다시 조회</button>'+
-    '<div class="card">'+head+(hasUp?'<div id="mCodes"></div>':'')+h+'</div>'+histHtml(r.list,r.old_products||[]);
+    '<div class="card">'+head+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
   $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m));
