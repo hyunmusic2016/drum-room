@@ -183,7 +183,8 @@ input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width
 .cols input[type=date]{min-height:44px}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .rules li{margin:9px 0;font-size:14px;line-height:1.7}
-#aTabs .tab{font-size:14px;padding:0 4px}
+#aTabs{gap:6px}
+#aTabs .tab{font-size:13.5px;letter-spacing:-.02em;white-space:nowrap;padding:0 2px;min-width:0}
 select{flex:1;min-width:0;min-height:48px;font:inherit;padding:0 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
 select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .part{font-weight:700;font-size:15px;margin:22px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent-strong)}
@@ -275,7 +276,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.12";
+const APP_VERSION="v0.19.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -829,7 +830,7 @@ async function reloadOnce(){
     if(d.ok)A.detail=d;else{A.detail=null;viewUser=null;editUser=null;if(!d.auth)A.err=d.msg}
   }else A.detail=null;
   if(setPage==="block"){const b=await rpc("admin_blocks");A.blocks=b.ok?b.list:[]}
-  if(setPage==="proxy")await loadBoard();
+  if(adminTab==="proxy")await loadBoard();
   if(setPage==="door"){const c=await rpc("admin_door_codes");A.codes=c.ok?c.codes:null}
   A.loaded=true;
   if(adminOn)renderAdmin();
@@ -1143,7 +1144,7 @@ function bindBlock2(){
 /* ===== 설정 화면 ===== */
 function settingsHtml(){
   // 큰 제목과 [← 뒤로]를 한 줄에(v0.18.11, 뒤로 버튼은 오른쪽)
-  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경",proxy:"관리자 예약"}[setPage];
+  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경"}[setPage];
   const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
   if(setPage==="status"){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
@@ -1152,23 +1153,21 @@ function settingsHtml(){
   if(setPage==="block")return back+blockHtml2();
   if(setPage==="pw")return back+setHtml();
   if(setPage==="door")return back+doorHtml();
-  if(setPage==="proxy")return back+proxyHtml();
   const mi=(k,l)=>'<div class="item"><button data-sp="'+k+'" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">'+l+'</button></div>';
-  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("proxy","관리자 예약")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
+  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
 }
 function bindSettings(){
-  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="proxy"||setPage==="door")reloadAdmin()});
+  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="door")reloadAdmin()});
   const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else if(viewUser!==null){viewUser=null;A.detail=null}else{setPage=null}uFlash="";renderAdmin()};
   if(setPage==="status"){if(editUser!==null&&A.detail)bindUserEdit();else if(viewUser!==null&&A.detail)bindUserView();else if(viewUser===null)bindStatus()}
   if(setPage==="block")bindBlock2();
   if(setPage==="pw")bindSet();
   if(setPage==="door")bindDoor();
-  if(setPage==="proxy")renderProxy();
 }
-function tabBtns(){return [["list","예약 목록"],["ext","이용자 등록"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}
+function tabBtns(){return [["list","예약 목록"],["ext","이용자 등록"],["proxy","관리자 예약"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}
 function applyAdminTab(){
-  ["list","ext","block"].forEach(k=>$("#sec-"+k).classList.toggle("hidden",k!==adminTab));
-  document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list")reloadAdmin()}});
+  ["list","ext","proxy","block"].forEach(k=>$("#sec-"+k).classList.toggle("hidden",k!==adminTab));
+  document.querySelectorAll("[data-at]").forEach(b=>{b.onclick=()=>{adminTab=b.dataset.at;setPage=null;editUser=null;viewUser=null;A.detail=null;uFlash="";renderAdmin();if(adminTab==="list"||adminTab==="proxy")reloadAdmin()}});
 }
 /* 관리자 예약(시간표에서 빈 칸을 눌러 대신 예약). 예약된 칸에는 본명이 보입니다. */
 function proxyHtml(){return '<div class="admin-warn" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18v.01"/></svg><div><b>관리자 예약 페이지입니다</b><small>일반예약은 일반 이용자와 같은 규칙(재원생 하루 1회, 정액권·횟수권 차감)으로, 슈퍼패스는 제한·차감 없이 바로 확정됩니다.</small></div></div><div id="pBox"><div class="tabs" id="pTabs" role="tablist"></div><div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">횟수권</i></span></div><div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="pGrid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="pGrid2"></div></div>'}
@@ -1252,7 +1251,7 @@ function renderAdmin(){
    '<p class="hint" style="margin-top:14px">지난 예약과 취소된 예약은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
    '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qPast")+dayGroups(past,false,"qPast")+'</details>'+
    '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qCanc")+dayGroups(canc,true,"qCanc")+'</details>'+
-   '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
+   '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-proxy">'+proxyHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
   bindHist("qPast","#hPast");bindHist("qCanc","#hCanc");
   if(fo){const el=$("#"+fo);el.focus();el.setSelectionRange(el.value.length,el.value.length)}
@@ -1265,7 +1264,7 @@ function renderAdmin(){
     if(!r.ok)alert(r.msg);
     reloadAdmin();refreshBook();
   });
-  bindUser();bindSettings();applyAdminTab();
+  bindUser();bindSettings();applyAdminTab();if(adminTab==="proxy")renderProxy();
 }
 
 /* ===== 시작 ===== */
@@ -1277,7 +1276,7 @@ checkSession();
 function autoRefresh(){
   if(document.hidden||$("#bg").classList.contains("open"))return;
   if(!$("#v-book").classList.contains("hidden"))refreshBook();
-  else if(adminOn&&!$("#v-admin").classList.contains("hidden")&&adminTab==="list"&&setPage===null)reloadAdmin();
+  else if(adminOn&&!$("#v-admin").classList.contains("hidden")&&(adminTab==="list"&&setPage===null||adminTab==="proxy"))reloadAdmin();
 }
 setInterval(autoRefresh,30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)autoRefresh()});
