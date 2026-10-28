@@ -139,6 +139,7 @@
 - **2026-10-27 저녁 마감 시점 남은 일(다음에 이어서):** ① **사용자: Supabase에 `007_admin_reserve_modes.sql`과 `008_homonym_day_limit.sql` 차례로 실행(006은 건너뛰어도 됨, 001~005+007로 시험 통과 확인함). 실행 전에는 v0.16.0 관리자 예약이 서버 오류.** 실행 결과 아직 못 받음 ② 실행 뒤 실제 서버에서 일반예약·슈퍼패스 시험(시험 이름 사용, 끝나면 정리) ③ 위 10-27 마감 목록의 나머지(아임웹·아이폰·PC 확인, 사용만료·블랙리스트, 갤럭시, pg_cron, 무료 플랜 중지 대비, 정식 오픈 준비).
 - **2026-10-28 확인(공개용 키로 실제 Supabase 호출):** `admin_find_users`·`admin_reserve`(새 형식)·`stu_day_taken`이 존재(익명 호출 시 "권한 없음" 응답, 없으면 "찾을 수 없음")하므로 **007·008은 Supabase에 실행된 상태**. pg_cron 예약 여부는 공개용 키로는 볼 수 없어 009 실행 결과로 확인 예정.
 - **2026-10-28 사용자: Supabase에 009 실행 완료. 자동 정리 확인함(009 결과):** pg_cron 켜짐, 작업 `drum-room-cleanup`(`10 18 * * *` UTC = 매일 03:10 서울, active), 최근 실행 2026-10-28 03:10(서울) **succeeded**(009 전이라 3개월 기준으로 실행됨). 30일 기준 첫 정리는 2026-10-29 03:10(서울). 남은 일 목록의 ④ pg_cron 확인은 완료.
+- **2026-10-28 결정(사용자): 아임웹 안에 넣는 배포(방법 A)는 포기.** 예약 화면은 GitHub Pages 주소(`https://hyunmusic2016.github.io/drum-room/`)로 직접 연다. `imweb-snippet.html`과 화면 안의 아임웹용 코드(`EMBED`, `placeSheet`, `postHeight` 등)는 다른 페이지 안에 들어갔을 때만 동작하므로 그대로 둬도 직접 열기에는 영향 없음(정리 여부는 사용자 결정 대기). 남은 일 목록의 아임웹 확인 항목은 없어짐.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다. 데이터 폴더는 postgres 사용자 홈(`/var/lib/postgresql/drumtest`)에 둔다(스크래치 폴더는 권한이 바뀌어 서버가 멈춘 적 있음). `cdn.jsdelivr.net`은 컨테이너에서 막혀 있어, 브라우저 시험 때는 npm으로 받은 supabase-js를 가로채 넣는다. 실제 Supabase 시험은 Chromium을 `HTTPS_PROXY` 프록시로 띄우고 `ignoreHTTPSErrors`로 한다.
 
 ---
