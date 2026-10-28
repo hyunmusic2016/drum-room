@@ -116,6 +116,14 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .admin-warn b{font-size:17px;font-weight:900;display:block}
 .admin-warn small{display:block;font-size:13px;color:var(--ink);opacity:.85;margin-top:2px}
 .admin-warn svg{flex:none;width:28px;height:28px}
+/* 관리자 지난 예약·취소된 예약: 날짜별 묶음 + 한 줄 요약(v0.16.9) */
+.dgrp{margin-top:10px}
+.dgrp-h{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:800}
+.dgrp-h small{font-weight:400;color:var(--sub)}
+.drow{display:flex;gap:10px;align-items:baseline;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
+.drow:last-child{border-bottom:0}
+.drow .t{flex:none;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.drow .why{color:var(--sub);font-size:13px}
 /* 관리자 예약 창: 이름으로 찾은 이용자 목록, 일반예약/슈퍼패스 선택 */
 #rBadge{font-size:13px;font-weight:400}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
@@ -239,7 +247,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.8";
+const APP_VERSION="v0.16.9";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1103,6 +1111,18 @@ function renderProxy(){
 function resItem(r){
   return '<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':"")+(r.super?'<span class="badge super">슈퍼패스</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="cancelled"?"status-cancel":"")+'">'+stLabel(r.status)+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="confirmed"&&!r.ended?'<div style="display:flex;gap:6px"><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>';
 }
+/* 지난 예약·취소된 예약을 날짜별로 묶어 한 줄씩(날짜는 최근 순, 같은 날은 시간 순) */
+function dayGroups(list,cancelled){
+  if(!list.length)return '<p class="hint">'+(cancelled?'취소된 예약이 없습니다.':'지난 예약이 없습니다.')+'</p>';
+  const by={};list.forEach(r=>(by[r.date]=by[r.date]||[]).push(r));
+  return Object.keys(by).sort().reverse().map(d=>{
+    const rs=by[d].sort((a,b)=>a.hour-b.hour);
+    return '<div class="dgrp"><div class="dgrp-h">'+dateLabel(d)+'<small>'+rs.length+'건</small></div>'+rs.map(r=>
+      '<div class="drow"><span class="t">'+hourLabel(r.hour)+'</span><span><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+
+      (r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':'')+(r.super?'<span class="badge super">슈퍼패스</span>':'')+
+      (cancelled?' <span class="why">· '+esc(r.reason||'취소')+'</span>':'')+'</span></div>').join("")+'</div>';
+  }).join("");
+}
 function renderAdmin(){
   if(!A.loaded){$("#adminPane").innerHTML='<p class="hint">불러오는 중입니다…</p>';return}
   // 예약 목록(v0.16.8): 위에는 앞으로의 확정 예약만, 아래 펼치기로 지난 예약(확정)·취소된 예약(최근 순)
@@ -1113,8 +1133,9 @@ function renderAdmin(){
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div>'+(A.err?'<div class="msg err">'+esc(A.err)+'</div>':'')+
    '<div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
    (up.length?up.map(resItem).join(""):'<p class="hint">예정된 예약이 없습니다.</p>')+'</div>'+
-   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary>'+(past.length?past.map(resItem).join(""):'<p class="hint">지난 예약이 없습니다.</p>')+'</details>'+
-   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary>'+(canc.length?canc.map(resItem).join(""):'<p class="hint">취소된 예약이 없습니다.</p>')+'</details>'+
+   '<p class="hint" style="margin-top:14px">지난 예약과 취소된 예약은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
+   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+dayGroups(past,false)+'</details>'+
+   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+dayGroups(canc,true)+'</details>'+
    '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
   $("#out").onclick=async()=>{try{await sb.auth.signOut()}catch(e){}leaveAdmin()};
