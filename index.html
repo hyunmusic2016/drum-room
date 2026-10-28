@@ -124,7 +124,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .dgrp-h::after{content:"▾";color:var(--accent-text);font-size:13px}
 details.dgrp[open]>.dgrp-h::after{content:"▴"}
 .hrow{display:flex;gap:8px;align-items:center;margin:4px 0 2px}
-.hrow .hsearch{margin:0;flex:1;min-width:0}
+.hrow .hsearch{margin:0;flex:1;min-width:0;height:44px;padding:0 12px}
+.hrow .btn{height:44px;min-height:44px;border-radius:10px;font-size:14px;font-weight:700}
 .drow{display:flex;gap:10px;align-items:baseline;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
 .drow:last-child{border-bottom:0}
 .drow .t{flex:none;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -252,7 +253,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.11";
+const APP_VERSION="v0.16.12";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
