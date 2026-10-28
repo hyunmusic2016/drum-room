@@ -205,6 +205,12 @@ select (select (x->>'id')::bigint from jsonb_array_elements((public.my_reservati
 select test.ok((public.move_own(:sk, '이강현', '2222', '2026-10-28', 6))->>'ok' = 'true', '동명이인 이용자 예약이 있어도 시간 변경 가능(008)');
 reset role; set role authenticated;
 
+-- ===== 11-2b. 내 예약의 이용자 구분 (012) =====
+reset role; set role anon;
+select test.ok((public.my_reservations('이강현', '1111'))->>'user_type' = 'ext', '등록 외부 이용자는 구분 ext');
+select test.ok((public.my_reservations('이강현', '2222'))->'user_type' = 'null'::jsonb, '미등록 재원생은 구분 없음(null)');
+reset role; set role authenticated;
+
 -- ===== 11-3. 출입 비밀번호 (011) =====
 reset role; set role anon;
 select test.ok((public.my_codes('이강현', '2222'))->'codes'->>'gate' = '0000', '앞으로의 예약이 있으면 출입 비밀번호 받음');
