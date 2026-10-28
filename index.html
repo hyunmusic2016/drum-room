@@ -264,7 +264,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.3";
+const APP_VERSION="v0.18.4";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1077,7 +1077,9 @@ function blockHtml2(){
   const t=seoulDate(),pad=n=>String(n).padStart(2,"0");
   const fmt=ts=>dateLabel(ts.slice(0,10))+" "+ts.slice(11,13)+":00";
   const items=A.blocks.map(g=>'<div class="item"><div class="row"><div><b>'+fmt(g.from)+' ~ '+fmt(g.to)+'</b><div class="hint">'+esc(g.reason||"사유 없음")+'</div></div><button class="btn danger small" data-bd="'+esc(g.group_id)+'">해제</button></div></div>').join("");
-  return '<div class="card"><b>이용 불가 시간 설정</b><label for="bSD">시작 날짜</label><input type="date" id="bSD" value="'+t+'" min="'+t+'"><label for="bSH">시작 시각 (0~23)</label><input type="number" id="bSH" min="0" max="23" value="1"><label for="bED">종료 날짜</label><input type="date" id="bED" value="'+t+'" min="'+t+'"><label for="bEH">종료 시각 (이 시각까지 이용 불가, 0~23)</label><input type="number" id="bEH" min="0" max="23" value="6"><p class="hint" id="bPrev"></p><label for="bReason">사유 (선택)</label><input type="text" id="bReason" maxlength="30" autocomplete="off" placeholder="예: 장비 점검"><div id="bMsg"></div><button class="btn" id="bGo">이용 불가로 설정</button></div><div class="card"><b>설정된 이용 불가</b>'+(items||'<p class="hint">설정된 이용 불가가 없습니다.</p>')+'</div>';
+  return '<div class="card"><b>이용 불가 시간 설정</b><div class="cols" style="grid-template-columns:1.5fr 1fr"><div><label for="bSD">시작 날짜</label><input type="date" id="bSD" value="'+t+'" min="'+t+'"></div><div><label for="bSH">시작 시각 (0~23)</label><input type="number" id="bSH" min="0" max="23" value="1"></div></div>'+
+    '<div class="cols" style="grid-template-columns:1.5fr 1fr"><div><label for="bED">종료 날짜</label><input type="date" id="bED" value="'+t+'" min="'+t+'"></div><div><label for="bEH">종료 시각 (0~23)</label><input type="number" id="bEH" min="0" max="23" value="6"></div></div>'+
+    '<p class="hint" style="margin:6px 0 0">종료 시각까지 이용 불가입니다.</p><p class="hint" id="bPrev"></p><label for="bReason">사유 (선택)</label><input type="text" id="bReason" maxlength="30" autocomplete="off" placeholder="예: 장비 점검"><div id="bMsg"></div><button class="btn" id="bGo">이용 불가로 설정</button></div><div class="card"><b>설정된 이용 불가</b>'+(items||'<p class="hint">설정된 이용 불가가 없습니다.</p>')+'</div>';
 }
 function bindBlock2(){
   const pad=n=>String(n).padStart(2,"0");
