@@ -264,7 +264,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.2";
+const APP_VERSION="v0.18.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -419,8 +419,8 @@ async function showCodes(sel,name,pw,still){
   const r=await rpc("my_codes",{p_name:name,p_pw:pw});
   const el=$(sel);if(el&&r.ok&&r.codes&&(!still||still()))el.innerHTML=codesHtml(r.codes);
 }
-/* 예약 확정·시간 변경 완료 화면의 출입 비밀번호 아래 안내(v0.18.2) */
-const DONE_NOTE='<p class="hint" style="margin-top:10px">이 화면을 캡처해 두시면 출입 비밀번호를 바로 확인하실 수 있습니다.<br>예약 시간 확인·변경·취소, 출입 비밀번호(정문·연습실·화장실), 정액권·횟수권 정보는 ‘내 예약’에서 이름과 비밀번호로 조회하실 수 있습니다.</p>';
+/* 예약 확정·예약 변경 완료 화면의 출입 비밀번호 아래 안내(v0.18.3) */
+const DONE_NOTE='<p class="hint" style="margin-top:10px">위의 내용은 ‘내 예약’에서 모두 확인 가능합니다.</p>';
 function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card rcard"><div class="nm">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div class="dt">'+dateLabel(date)+'</div><div class="tm">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
@@ -661,7 +661,7 @@ if(EMBED){
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#sheet"),{childList:true}); // 창 내용이 바뀔 때마다(선택 → 입력 → 완료)
   new MutationObserver(()=>{askView();placeSheet()}).observe($("#bg"),{attributes:true,attributeFilter:["class"]}); // 창이 열릴 때
 }
-/* 예약 확정 화면: [확인]을 누르지 않으면 30초 뒤 창을 닫고 처음 예약 화면(맨 위, 오늘)으로 돌아갑니다(관리자 대리 예약은 제외).
+/* 예약 확정·예약 변경 완료 화면: [확인]을 누르지 않으면 30초 뒤 창을 닫고 처음 예약 화면(맨 위, 오늘)으로 돌아갑니다(관리자 대리 예약은 제외).
    남은 초를 확인 버튼에 "확인 (N)"으로 보여 줍니다. 창이 닫히면(확인·바깥 누름·Esc) 타이머도 멈춥니다. */
 let homeTimer=null;
 function stopAutoHome(){if(homeTimer){clearInterval(homeTimer);homeTimer=null}}
@@ -677,7 +677,7 @@ function autoHome(){
 function closeSheet(){stopAutoHome();$("#sheet").classList.remove("done","stu","ext","tmr","daycol");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
 /* 학원에 켜 둔 화면용(v0.16.3): 아무도 2분 동안 만지지 않으면 처음 화면(예약하기, 오늘)으로 되돌립니다.
-   내 예약에 입력·조회한 이름·비밀번호·결과와 열어 둔 예약 창·시간 변경 창도 지웁니다. 관리자 화면은 제외. */
+   내 예약에 입력·조회한 이름·비밀번호·결과와 열어 둔 예약 창·예약 변경 창도 지웁니다. 관리자 화면은 제외. */
 const IDLE_MS=120000;let lastAct=Date.now();
 ["pointerdown","keydown","input","wheel","touchstart","scroll"].forEach(t=>window.addEventListener(t,()=>{lastAct=Date.now()},{capture:true,passive:true}));
 function idleReset(){
@@ -714,7 +714,7 @@ $("#mFind").onclick=async()=>{
   }
   const now=r.list.filter(x=>!x.ended); // 지난 예약은 아래 '예약 기록'에서 봅니다.
   if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
-  h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="cancelled"?"status-cancel":"")+'">'+stLabel(x.status)+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="confirmed"&&!x.started?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
+  h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="cancelled"?"status-cancel":"")+'">'+stLabel(x.status)+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="confirmed"&&!x.started?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">예약 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
   const hasUp=now.some(x=>x.status==="confirmed");
   $("#mOut").innerHTML='<div class="card">'+(hasUp?'<div id="mCodes"></div>':'')+h+'</div>'+histHtml(r.list,r.old_products||[]);
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
@@ -733,7 +733,7 @@ async function openMoveSheet(id){
   const draw=()=>{
     const dates=allowedDates();
     $("#sheet").classList.toggle("tmr",md===dates[1]);
-    $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">시간 변경</h2><button class="btn ghost small" id="mx">닫기</button></div>'+
+    $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">예약 변경</h2><button class="btn ghost small" id="mx">닫기</button></div>'+
       '<p class="hint">현재 예약: '+dateLabel(r.date)+' '+hourLabel(r.hour)+'<br>새 시간을 선택하면 기존 예약이 새 시간으로 이동됩니다.</p>'+
       '<div class="tabs">'+dates.map((d,i)=>'<button class="tab'+(i?' tmr':'')+'" data-md="'+d+'" aria-selected="'+(d===md)+'">'+(i?"내일":"오늘")+'<small>'+dateLabel(d)+'</small></button>').join("")+'</div>'+
       '<div id="mMsg">'+msg+'</div><div class="grid">'+(board?slotsFor(md).map(s=>{
@@ -748,9 +748,9 @@ async function openMoveSheet(id){
       const res=await rpc("move_own",{p_id:id,p_name:mine.name,p_pw:mine.pw,p_date:md,p_hour:h});
       if(!res.ok){await loadBoard();msg='<div class="msg err">'+esc(res.msg)+'</div>';draw();return}
       refreshBook();$("#mFind").click();
-      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("시간이 변경되었습니다",res.name,null,res.date,res.hour,'<div id="codesBox"></div>'+DONE_NOTE);
+      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("예약이 변경되었습니다",res.name,null,res.date,res.hour,'<div id="codesBox"></div>'+DONE_NOTE);
       showCodes("#codesBox",mine.name,mine.pw);
-      burst(kind);$("#ok").onclick=closeSheet;
+      burst(kind);$("#ok").onclick=closeSheet;autoHome(); // 예약 확정과 같이 30초 뒤 처음 화면으로
     });
   };
   await loadBoard();draw();
@@ -1035,7 +1035,7 @@ function bindUserEdit(){
 /* ===== 설정 > 관리자 비밀번호 변경(Supabase 계정 비밀번호) ===== */
 function doorHtml(){
   if(!A.codes)return '<p class="hint">불러오는 중입니다…</p>';
-  return '<div class="card"><b>출입 비밀번호</b><p class="hint">예약 확정·시간 변경 화면과 내 예약(앞으로의 예약이 있을 때)에 보입니다. 저장하면 바로 바뀝니다.</p>'+
+  return '<div class="card"><b>출입 비밀번호</b><p class="hint">예약 확정·예약 변경 화면과 내 예약(앞으로의 예약이 있을 때)에 보입니다. 저장하면 바로 바뀝니다.</p>'+
     DOOR_LABELS.map(([k,l])=>'<label for="d_'+k+'">'+l+' 비밀번호</label><input type="text" id="d_'+k+'" maxlength="20" autocomplete="off" value="'+esc(A.codes[k]||"")+'">').join("")+
     '<div id="dMsg"></div><button class="btn" id="dGo">저장</button></div>';
 }
