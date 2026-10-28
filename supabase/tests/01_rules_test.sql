@@ -227,14 +227,20 @@ reset role; set role authenticated;
 select test.ok((public.admin_set_status(:ext_uid, 'blacklisted'))->>'ok' = 'false', '블랙리스트는 아직 받지 않음');
 select test.ok((public.admin_set_status(:ext_uid, 'active'))->'user'->>'status' = 'active', '다시 사용');
 
--- ===== 14. 3개월 뒤 정리 =====
+-- ===== 14. 30일 뒤 정리 (009) =====
 reset role;
-set app.fake_now = '2027-02-28 12:00:00';
+set app.fake_now = '2026-12-20 12:00:00';
+select test.ok(public.keep_from() = '2026-11-20', '보관 기간 30일(오늘 - 30일)');
 select test.ok((public.cleanup_old())->>'ok' = 'true', '정리 함수 실행');
-select test.ok(not exists (select 1 from public.reservations r where date < '2026-11-28' and not exists
-                 (select 1 from public.products q where q.id = r.product_id and q.end_date >= '2026-11-28')), '보관 기간 지난 예약 삭제');
+select test.ok(not exists (select 1 from public.reservations r where date < '2026-11-20' and not exists
+                 (select 1 from public.products q where q.id = r.product_id and q.end_date >= '2026-11-20')), '30일 지난 예약 삭제');
 select test.ok(exists (select 1 from public.reservations r join public.products q on q.id = r.product_id
-                 where r.date < '2026-11-28' and q.end_date >= '2026-11-28'), '아직 끝나지 않은 상품의 예약은 남김(사용 횟수 보존)');
-select test.ok(not exists (select 1 from public.products where end_date < '2026-11-28'), '보관 기간 지난 상품 삭제');
+                 where r.date < '2026-11-20' and q.end_date >= '2026-11-20'), '아직 끝나지 않은 상품의 예약은 남김(사용 횟수 보존)');
+select test.ok(not exists (select 1 from public.products where end_date < '2026-11-20'), '30일 지난 상품 삭제');
+
+select test.ok((public.cleanup_status())->>'pg_cron' = 'false', '정리 상태 확인 함수(로컬은 pg_cron 없음)');
+set role anon;
+select test.denied($$select public.cleanup_status()$$, '익명은 정리 상태 함수를 부를 수 없음');
+reset role;
 
 select '모든 시험 통과' as 결과;
