@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>드럼 연습실 예약</title>
+<title>B1 음악 연습실 예약</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -208,7 +208,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 </head>
 <body>
 <div class="wrap">
-  <div class="topbar"><h1>드럼 연습실 예약</h1><button class="topbtn" id="topBtn" data-go="mine"></button></div>
+  <div class="topbar"><h1>B1 음악 연습실 예약</h1><button class="topbtn" id="topBtn" data-go="mine"></button></div>
 
   <section id="v-book">
     <div class="tabs" id="dayTabs" role="tablist"></div>
@@ -253,7 +253,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.12";
+const APP_VERSION="v0.16.13";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
