@@ -123,10 +123,12 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .dgrp-h small{font-weight:400;color:var(--sub);margin-left:auto}
 .dgrp-h::after{content:"▾";color:var(--accent-text);font-size:13px}
 details.dgrp[open]>.dgrp-h::after{content:"▴"}
-.codes{border:2px solid var(--accent-strong);border-radius:12px;padding:10px 14px;margin:12px 0 0;background:var(--surface)}
-.codes>b{display:block;font-size:14px;margin-bottom:4px}
-.crow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:15px}
-.crow b{font-size:20px;font-weight:900;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+.codes{border:1px solid var(--line);border-radius:12px;padding:8px 10px 10px;margin:12px 0 0;background:var(--bg)}
+.codes>b{display:block;font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px;text-align:center}
+.cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.crow{text-align:center;min-width:0}
+.crow span{display:block;font-size:12px;color:var(--sub)}
+.crow b{display:block;font-size:16px;font-weight:800;letter-spacing:.04em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .hrow{display:flex;gap:8px;align-items:center;margin:4px 0 2px}
 .hrow .hsearch{margin:0;flex:1;min-width:0;height:44px;padding:0 12px}
 .hrow .btn{height:44px;min-height:44px;border-radius:10px;font-size:14px;font-weight:700}
@@ -189,8 +191,13 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .slot.sel span{color:inherit}
 .sheet.done{position:relative;overflow:hidden;text-align:center}
 .ck{display:block;width:40px;height:40px;margin:0 auto}
-.sheet.done.stu{--done:var(--stu-btn);--done-line:var(--stu-btn)}
-.sheet.done.ext{--done:var(--ext-btn);--done-line:var(--ext-line)}
+.sheet.done.stu{--done:var(--stu-btn);--done-line:var(--stu-btn);--done-text:var(--stu-text)}
+.sheet.done.ext{--done:var(--ext-btn);--done-line:var(--ext-line);--done-text:var(--ext-text)}
+/* 완료 화면의 예약 카드: 날짜·시간을 가장 크게(v0.18.1) */
+.sheet.done .rcard{border:2px solid var(--done-line,var(--accent-strong));padding:14px 12px}
+.rcard .nm{font-size:17px;font-weight:700}
+.rcard .dt{font-size:19px;font-weight:800;margin-top:6px;color:var(--done-text,var(--ink))}
+.rcard .tm{font-size:32px;font-weight:900;line-height:1.2;color:var(--done-text,var(--ink));font-variant-numeric:tabular-nums}
 .sheet.done.stu #ok,.sheet.done.ext #ok{background:var(--done);color:#fff}
 .ck circle{fill:none;stroke:var(--done-line,var(--accent-strong));stroke-width:5;stroke-dasharray:227;stroke-dashoffset:227;animation:ckd .35s ease-out forwards}
 .ck path{fill:none;stroke:var(--done-line,var(--accent-strong));stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:52;stroke-dashoffset:52;animation:ckd .25s .3s ease-out forwards}
@@ -257,7 +264,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.0";
+const APP_VERSION="v0.18.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -407,13 +414,13 @@ function renderBook(){
 /* 출입 비밀번호(v0.17.2): 서버(011)가 아직 끝나지 않은 확정 예약이 있는 사람에게만 줍니다.
    비밀번호는 화면 코드·GitHub에 넣지 않고, 관리자가 설정 > 출입 비밀번호에서 바꿉니다. */
 const DOOR_LABELS=[["gate","정문"],["room","연습실"],["toilet","화장실"]];
-function codesHtml(c){return c?'<div class="codes"><b>출입 비밀번호</b>'+DOOR_LABELS.map(([k,l])=>'<div class="crow"><span>'+l+' 비밀번호</span><b>'+esc(c[k]||"")+'</b></div>').join("")+'</div>':""}
+function codesHtml(c){return c?'<div class="codes"><b>출입 비밀번호</b><div class="cgrid">'+DOOR_LABELS.map(([k,l])=>'<div class="crow"><span>'+l+'</span><b>'+esc(c[k]||"")+'</b></div>').join("")+'</div></div>':""}
 async function showCodes(sel,name,pw,still){
   const r=await rpc("my_codes",{p_name:name,p_pw:pw});
   const el=$(sel);if(el&&r.ok&&r.codes&&(!still||still()))el.innerHTML=codesHtml(r.codes);
 }
 function doneHtml(title,name,prod,date,hour,note){
-  return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div>'+dateLabel(date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
+  return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card rcard"><div class="nm">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div class="dt">'+dateLabel(date)+'</div><div class="tm">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
 function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);$("#sheet").classList.add("daycol");
