@@ -111,7 +111,9 @@ set role authenticated;
 select test.ok((public.admin_create_user('{"type":"stu","name":"김정액","pw":"0000","phone":"010-0000-1111",
   "prod":{"kind":"flat","start":"2026-10-27","days":30,"limit":2}}'))->>'ok' = 'true', '재원생 + 정액권(하루 2회) 등록');
 reset role; set role anon;
-select test.ok((public.reserve('2026-10-27', 20, '김정액', '1111', true, 'stu'))->>'msg' = '정액권 비밀번호가 일치하지 않습니다.', '정액권 비밀번호 확인');
+select (public.reserve('2026-10-27', 20, '김정액', '1111', true, 'stu')) as hm \gset
+select test.ok((:'hm'::jsonb)->>'ok' = 'true' and (:'hm'::jsonb)->>'prod' is null, '정액권 재원생과 비밀번호가 다르면 동명이인 일반 재원생으로 예약(008)');
+select test.ok((public.cancel_own(((:'hm'::jsonb)->>'id')::bigint, '김정액', '1111'))->>'ok' = 'true', '동명이인 예약 취소');
 select (public.reserve('2026-10-27', 20, '김정액', '0000', true, 'stu'))->>'id' as f1 \gset
 select test.ok((public.reserve('2026-10-27', 21, '김정액', '0000', true, 'stu'))->>'prod' = 'flat', '정액권은 하루 N회(2번째)');
 select test.ok((public.reserve('2026-10-27', 22, '김정액', '0000', true, 'stu'))->>'msg' like '정액권 하루 이용 횟수(2회)%', '정액권 하루 횟수 초과 막힘');
@@ -161,7 +163,7 @@ select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false,
 select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false, true))->>'ok' = 'true', '슈퍼패스: 재원생 2회째도 예약');
 select test.ok((public.admin_reserve('2026-10-27', 17, '김정새', :ext_uid, false, false))->>'msg' like '선택한 이용자를 찾을 수 없습니다%', '이름과 다른 이용자 번호는 거절');
 select test.ok((public.admin_find_users('김정새', '2026-10-27'))->'users'->0->'product'->>'kind' = 'flat', '이름으로 이용자·정액권 찾기');
-select test.ok((public.admin_find_users('박재원', '2026-10-27'))->>'day_count' = '2' and jsonb_array_length((public.admin_find_users('박재원', '2026-10-27'))->'users') = 0, '미등록 이름: 이용자 없음, 그날 예약 수');
+select test.ok((public.admin_find_users('박재원', '2026-10-27'))->>'day_taken' = 'true' and jsonb_array_length((public.admin_find_users('박재원', '2026-10-27'))->'users') = 0, '미등록 이름: 이용자 없음, 그날 예약 수');
 select (public.admin_reserve('2026-10-27', 17, '김정새', :stu_uid, false, false))->>'id' as af1 \gset
 reset role;
 select test.ok((select product_kind = 'flat' and pw_hash is not null and user_id = :stu_uid from public.reservations where id = :af1), '일반예약: 정액권 차감 + 등록 비밀번호 연결');
@@ -182,6 +184,26 @@ select test.ok((public.my_reservations('박재원', '0000'))->>'ok' = 'false', '
 reset role; set role authenticated;
 select test.ok((public.admin_cancel(:af1, '시험'))->>'ok' = 'true', '관리자 예약 취소');
 select test.ok((public.admin_cancel(:e1, '중복'))->>'ok' = 'false', '이미 취소된 예약은 다시 취소 안 됨');
+
+-- ===== 11-2. 동명이인 재원생 하루 1회 (008) =====
+select test.ok((public.admin_create_user('{"type":"ext","name":"이강현","pw":"1111","phone":"01011110000",
+  "prod":{"kind":"count","start":"2026-10-27","days":30,"total":5}}'))->>'ok' = 'true', '이용권 이용자 이강현 등록');
+reset role; set role anon;
+select test.ok((public.reserve('2026-10-28', 1, '이강현', '1111', true, 'ext'))->>'prod' = 'count', '이용권 이강현 예약');
+select test.ok((public.reserve('2026-10-28', 2, '이강현', '2222', true, 'stu'))->>'ok' = 'true', '재원생 이강현은 등록 이용자 이강현의 예약과 관계없이 예약(008)');
+select test.ok((public.reserve('2026-10-28', 3, '이강현', '3333', true, 'stu'))->>'msg' like '하루에 한 번만%', '미등록 재원생은 같은 이름끼리 하루 1회(비밀번호 바꿔도 막힘)');
+select test.ok((public.reserve('2026-10-28', 3, '김정새', '9999', true, 'stu'))->>'ok' = 'true', '정액권 재원생 김정새와 동명이인 재원생도 예약(008)');
+select test.ok((public.reserve('2026-10-28', 4, '김정새', '5555', true, 'stu'))->>'prod' = 'flat', '정액권 김정새는 그대로 정액권 예약');
+reset role; set role authenticated;
+select test.ok((public.admin_find_users('이강현', '2026-10-28'))->>'day_taken' = 'true'
+           and (public.admin_find_users('이강현', '2026-10-28'))->'users'->0->>'day_taken' = 'false', '관리자 이름 찾기: 미등록 재원생 쪽만 예약 있음');
+select test.ok((public.admin_reserve('2026-10-28', 5, '이강현', null, false, false))->>'msg' like '재원생은 하루에 한 번만%', '관리자 일반예약: 미등록 재원생 이강현 2회째 막힘');
+select (public.admin_find_users('이강현', '2026-10-28'))->'users'->0->>'id' as lkh \gset
+select test.ok((public.admin_reserve('2026-10-28', 5, '이강현', :lkh, false, false))->>'prod' = 'count', '관리자 일반예약: 이용권 이강현은 따로 예약');
+reset role; set role anon;
+select (select (x->>'id')::bigint from jsonb_array_elements((public.my_reservations('이강현', '2222'))->'list') x) as sk \gset
+select test.ok((public.move_own(:sk, '이강현', '2222', '2026-10-28', 6))->>'ok' = 'true', '동명이인 이용자 예약이 있어도 시간 변경 가능(008)');
+reset role; set role authenticated;
 
 -- ===== 12. 이용 불가 설정 =====
 select test.ok((public.admin_block('2026-10-28', 9, '2026-10-28', 12, '점검', false))->>'need_confirm' = 'true', '이용 불가 기간에 예약 있으면 확인 요청');

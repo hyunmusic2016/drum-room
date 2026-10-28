@@ -235,7 +235,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.0";
+const APP_VERSION="v0.16.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -440,11 +440,11 @@ const MODE_HELP={
   normal:"일반 이용자와 같은 규칙으로 예약합니다. 재원생은 하루 1회까지, 정액권·이용권 이용자는 횟수가 차감되고 다 쓰면 예약되지 않습니다. 상품이 없는 외부 이용자는 횟수 제한이 없고, 등록되지 않은 외부 이용자는 예약할 수 없습니다.",
   super:"하루 횟수, 이용자 등록, 정액권·이용권 확인 없이 바로 확정합니다. 정액권·이용권 횟수도 차감되지 않습니다. 이미 예약된 시간, 지난 시간, 이용 불가 시간만 막습니다."
 };
-function whoInfo(u,D,dc){
+function whoInfo(u,D){
   const p=u.product;
   return '<b style="color:var('+(u.type==="ext"?'--ext-text':'--stu-text')+')">'+tgtLabel(u.type)+'</b> '+
     (p?'<i class="badge '+p.kind+'" style="margin-left:0">'+PROD[p.kind]+'</i> '+(p.kind==='flat'?(D===allowedDates()[0]?'오늘 ':'내일 '):'')+prodLeftText(p,D)
-      :'일반 · '+(u.type==="stu"?'하루 1회'+(dc?' (이 날 예약 있음)':''):'횟수 제한 없음'));
+      :'일반 · '+(u.type==="stu"?'하루 1회'+(u.day_taken?' (이 날 예약 있음)':''):'횟수 제한 없음'));
 }
 function openAdminSheet(h){const D=curDateA;
   $("#sheet").classList.toggle("tmr",D===allowedDates()[1]);$("#sheet").classList.add("daycol");
@@ -470,13 +470,13 @@ function openAdminSheet(h){const D=curDateA;
     const us=found.users;
     if(us.length===1&&pick===null)pick=us[0].id;
     const sel=us.find(u=>u.id===pick);
-    $("#rBadge").innerHTML=sel?whoInfo(sel,D,found.day_count)
+    $("#rBadge").innerHTML=sel?whoInfo(sel,D)
       :(pick===null&&us.length?'<span style="color:var(--sub)">같은 이름이 '+us.length+'명입니다. 아래에서 선택하십시오.</span>'
         :'<span style="color:var(--sub)">등록되지 않은 이름</span>');
     const radio=(v,html)=>'<label class="who"><input type="radio" name="who" value="'+v+'"'+(pick===v?' checked':'')+'><span>'+html+'</span></label>';
-    let html=us.length?us.map(u=>radio(u.id,whoInfo(u,D,found.day_count)+' · 전화 뒤 '+esc(u.phone4)+(u.part?' · '+esc(u.part):''))).join("")+radio(0,'목록에 없는 사람 (미등록)'):'';
+    let html=us.length?us.map(u=>radio(u.id,whoInfo(u,D)+' · 전화 뒤 '+esc(u.phone4)+(u.part?' · '+esc(u.part):''))).join("")+radio(0,'목록에 없는 사람 (미등록)'):'';
     if(!us.length||pick===0)html+='<div style="display:flex;gap:18px;margin-top:10px"><label class="check" style="margin:0"><input type="checkbox" id="rT1"'+(uExt?'':' checked')+'><span style="font-size:15px;font-weight:700">재원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="rT2"'+(uExt?' checked':'')+'><span style="font-size:15px;font-weight:700">외부 이용자</span></label></div>'+
-      '<p class="hint">'+(uExt?'등록되지 않은 외부 이용자는 슈퍼패스로만 예약할 수 있습니다.':'등록되지 않은 재원생: 일반예약은 하루 1회'+(found.day_count?' (이 날 예약 있음)':'')+'.')+' 비밀번호가 없어 ‘내 예약’에서는 보이지 않습니다.</p>';
+      '<p class="hint">'+(uExt?'등록되지 않은 외부 이용자는 슈퍼패스로만 예약할 수 있습니다.':'등록되지 않은 재원생: 일반예약은 하루 1회'+(found.day_taken?' (이 날 예약 있음)':'')+'.')+' 비밀번호가 없어 ‘내 예약’에서는 보이지 않습니다.</p>';
     $("#rWho").innerHTML=html;
     document.querySelectorAll('#rWho input[name="who"]').forEach(x=>x.onchange=()=>{pick=+x.value;renderWho();placeSheet()});
     if($("#rT1")){$("#rT1").onchange=()=>{uExt=!$("#rT1").checked;renderWho()};$("#rT2").onchange=()=>{uExt=$("#rT2").checked;renderWho()}}
