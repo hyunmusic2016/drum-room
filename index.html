@@ -235,7 +235,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.2";
+const APP_VERSION="v0.16.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -636,6 +636,20 @@ function autoHome(){
 }
 function closeSheet(){stopAutoHome();$("#sheet").classList.remove("done","stu","ext","tmr","daycol");$("#bg").classList.remove("open");if(selHour!==null){selHour=null;if(!$("#v-book").classList.contains("hidden"))renderBook()}}
 $("#bg").onclick=e=>{if(e.target.id==="bg")closeSheet()};
+/* 학원에 켜 둔 화면용(v0.16.3): 아무도 2분 동안 만지지 않으면 처음 화면(예약하기, 오늘)으로 되돌립니다.
+   내 예약에 입력·조회한 이름·비밀번호·결과와 열어 둔 예약 창·시간 변경 창도 지웁니다. 관리자 화면은 제외. */
+const IDLE_MS=120000;let lastAct=Date.now();
+["pointerdown","keydown","input","wheel","touchstart","scroll"].forEach(t=>window.addEventListener(t,()=>{lastAct=Date.now()},{capture:true,passive:true}));
+function idleReset(){
+  closeSheet();$("#sheet").innerHTML="";
+  mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mFind").disabled=false;
+  curDate=null;go("book");window.scrollTo(0,0);if(document.activeElement)document.activeElement.blur();
+}
+setInterval(()=>{
+  if(Date.now()-lastAct<IDLE_MS||!$("#v-admin").classList.contains("hidden"))return;
+  const dirty=$("#v-book").classList.contains("hidden")||$("#bg").classList.contains("open")||curDate!==allowedDates()[0]||mine||$("#mName").value||$("#mPw").value;
+  if(dirty){idleReset();lastAct=Date.now()}
+},5000);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
 
 /* ===== 내 예약 ===== */
