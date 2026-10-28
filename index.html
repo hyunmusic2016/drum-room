@@ -59,7 +59,7 @@ h2{font-size:18px;font-weight:700;margin:20px 0 8px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin:10px 0}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
 label{display:block;font-weight:700;font-size:14px;margin:16px 0 8px}
-input[type=text],input[type=password],input[type=email],input[type=tel],input[type=number],input[type=date]{width:100%;font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+input[type=text],input[type=password],input[type=email],input[type=search],input[type=tel],input[type=number],input[type=date]{width:100%;font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
 input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .hint{font-size:13px;color:var(--sub);margin:4px 0 0}
 .hint.warn{color:var(--brass);font-weight:500}
@@ -124,6 +124,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .drow:last-child{border-bottom:0}
 .drow .t{flex:none;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
 .drow .why{color:var(--sub);font-size:13px}
+.hsearch{margin:4px 0 2px}
 /* 관리자 예약 창: 이름으로 찾은 이용자 목록, 일반예약/슈퍼패스 선택 */
 #rBadge{font-size:13px;font-weight:400}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
@@ -247,7 +248,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.9";
+const APP_VERSION="v0.16.10";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1117,11 +1118,26 @@ function dayGroups(list,cancelled){
   const by={};list.forEach(r=>(by[r.date]=by[r.date]||[]).push(r));
   return Object.keys(by).sort().reverse().map(d=>{
     const rs=by[d].sort((a,b)=>a.hour-b.hour);
-    return '<div class="dgrp"><div class="dgrp-h">'+dateLabel(d)+'<small>'+rs.length+'건</small></div>'+rs.map(r=>
-      '<div class="drow"><span class="t">'+hourLabel(r.hour)+'</span><span><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+
+    return '<div class="dgrp"><div class="dgrp-h">'+dateLabel(d)+'<small class="cnt">'+rs.length+'건</small></div>'+rs.map(r=>
+      '<div class="drow" data-n="'+esc(normName(r.name))+'"><span class="t">'+hourLabel(r.hour)+'</span><span><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+
       (r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':'')+(r.super?'<span class="badge super">슈퍼패스</span>':'')+
       (cancelled?' <span class="why">· '+esc(r.reason||'취소')+'</span>':'')+'</span></div>').join("")+'</div>';
   }).join("");
+}
+const normName=n=>String(n||"").replace(/\s+/g,"").toLowerCase();
+/* 지난 예약·취소된 예약 이름 검색(v0.16.10): 입력한 글자가 이름에 들어간 줄만 보이고, 날짜 묶음의 건수도 맞춰 바뀝니다. */
+const histQ={qPast:"",qCanc:""};
+function histSearch(id){
+  return '<input type="search" class="hsearch" id="'+id+'" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(histQ[id])+'">'+
+    '<p class="hint hidden" id="'+id+'None">찾는 이름의 예약이 없습니다.</p>';
+}
+function applyHistQ(id,box){
+  const q=normName(histQ[id]);let any=false;
+  $(box).querySelectorAll(".dgrp").forEach(g=>{
+    let n=0;g.querySelectorAll(".drow").forEach(r=>{const hit=!q||r.dataset.n.includes(q);r.classList.toggle("hidden",!hit);if(hit)n++});
+    g.classList.toggle("hidden",!n);g.querySelector(".cnt").textContent=n+"건";if(n)any=true;
+  });
+  $("#"+id+"None").classList.toggle("hidden",any||!$(box).querySelector(".dgrp"));
 }
 function renderAdmin(){
   if(!A.loaded){$("#adminPane").innerHTML='<p class="hint">불러오는 중입니다…</p>';return}
@@ -1129,15 +1145,20 @@ function renderAdmin(){
   const ok=A.res.filter(r=>r.status==="confirmed"),up=ok.filter(r=>!r.ended),past=ok.filter(r=>r.ended).reverse(),
         canc=A.res.filter(r=>r.status==="cancelled").reverse();
   const wasOpen=id=>{const d=document.getElementById(id);return d&&d.open?" open":""}; // 자동 새로고침 때 펼친 상태 유지
+  const fo=document.activeElement&&histQ.hasOwnProperty(document.activeElement.id)?document.activeElement.id:null; // 검색 칸에 입력 중이었으면 다시 커서를 둡니다
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div>'+(A.err?'<div class="msg err">'+esc(A.err)+'</div>':'')+
    '<div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
    (up.length?up.map(resItem).join(""):'<p class="hint">예정된 예약이 없습니다.</p>')+'</div>'+
    '<p class="hint" style="margin-top:14px">지난 예약과 취소된 예약은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
-   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+dayGroups(past,false)+'</details>'+
-   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+dayGroups(canc,true)+'</details>'+
+   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qPast")+dayGroups(past,false)+'</details>'+
+   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qCanc")+dayGroups(canc,true)+'</details>'+
    '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
+  [["qPast","#hPast"],["qCanc","#hCanc"]].forEach(([id,box])=>{
+    $("#"+id).oninput=()=>{histQ[id]=$("#"+id).value;applyHistQ(id,box)};applyHistQ(id,box);
+  });
+  if(fo){const el=$("#"+fo);el.focus();el.setSelectionRange(el.value.length,el.value.length)}
   $("#out").onclick=async()=>{try{await sb.auth.signOut()}catch(e){}leaveAdmin()};
   document.querySelectorAll("[data-ac]").forEach(b=>b.onclick=async()=>{
     const reason=prompt("취소 사유를 입력하십시오 (예: 장비 점검)");
