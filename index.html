@@ -239,7 +239,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.7";
+const APP_VERSION="v0.16.8";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1105,12 +1105,16 @@ function resItem(r){
 }
 function renderAdmin(){
   if(!A.loaded){$("#adminPane").innerHTML='<p class="hint">불러오는 중입니다…</p>';return}
-  const up=A.res.filter(r=>!r.ended),past=A.res.filter(r=>r.ended).reverse();
+  // 예약 목록(v0.16.8): 위에는 앞으로의 확정 예약만, 아래 펼치기로 지난 예약(확정)·취소된 예약(최근 순)
+  const ok=A.res.filter(r=>r.status==="confirmed"),up=ok.filter(r=>!r.ended),past=ok.filter(r=>r.ended).reverse(),
+        canc=A.res.filter(r=>r.status==="cancelled").reverse();
+  const wasOpen=id=>{const d=document.getElementById(id);return d&&d.open?" open":""}; // 자동 새로고침 때 펼친 상태 유지
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div>'+(A.err?'<div class="msg err">'+esc(A.err)+'</div>':'')+
    '<div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
    (up.length?up.map(resItem).join(""):'<p class="hint">예정된 예약이 없습니다.</p>')+'</div>'+
-   '<details class="hist"><summary>지난 예약 <small>'+past.length+'건</small></summary>'+(past.length?past.map(resItem).join(""):'<p class="hint">지난 예약이 없습니다.</p>')+'</details>'+
+   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary>'+(past.length?past.map(resItem).join(""):'<p class="hint">지난 예약이 없습니다.</p>')+'</details>'+
+   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary>'+(canc.length?canc.map(resItem).join(""):'<p class="hint">취소된 예약이 없습니다.</p>')+'</details>'+
    '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
   $("#out").onclick=async()=>{try{await sb.auth.signOut()}catch(e){}leaveAdmin()};
