@@ -143,7 +143,8 @@ details.dgrp[open]>.dgrp-h::after{content:"▴"}
 .idpw>div{min-width:0}
 div#rBadge:not(:empty){margin-top:6px}
 /* 내 예약 결과 맨 위: 이름 + 구분 배지 + 정액권/횟수권 배지(v0.18.8) */
-.backrow{display:flex;justify-content:flex-end;margin-bottom:10px}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 10px;min-height:40px}
+.titlerow h2{margin:0}
 .mhead{text-align:center;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
 .mhead b{display:block;font-size:22px;font-weight:900}
 .mhead .bdg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:4px}
@@ -240,7 +241,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
   </section>
 
   <section id="v-mine" class="hidden">
-    <h2>내 예약 확인</h2>
+    <div class="titlerow"><h2>내 예약 확인</h2><span id="mBackSlot"></span></div>
     <div class="card" id="mForm">
       <div class="idpw">
         <div><label for="mName">이름</label><input type="text" id="mName" autocomplete="off" placeholder="예약한 이름"></div>
@@ -274,7 +275,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.10";
+const APP_VERSION="v0.18.11";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -711,14 +712,14 @@ $("#mPw").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();
 // 이름이 있고 비밀번호 4자리를 다 치면 바로 조회(v0.18.5)
 $("#mPw").addEventListener("input",()=>{if(/^\d{4}$/.test($("#mPw").value)&&$("#mName").value.trim()&&!$("#mFind").disabled)$("#mFind").click()});
 /* 조회에 성공하면 입력 칸을 숨기고 결과 화면으로(v0.18.5). [← 다시 조회]는 입력값을 지우고 입력 화면으로 돌아갑니다. */
-function mineReset(){mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mFind").disabled=false;$("#mForm").classList.remove("hidden")}
+function mineReset(){mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mBackSlot").innerHTML="";$("#mFind").disabled=false;$("#mForm").classList.remove("hidden")}
 $("#mFind").onclick=async()=>{
   const name=$("#mName").value,pw=$("#mPw").value;
   const my=++mineSeq;$("#mFind").disabled=true;
   const r=await rpc("my_reservations",{p_name:name,p_pw:pw});
   if(my!==mineSeq)return; // 더 나중에 요청한 조회가 있으면 이 결과는 버립니다.
   $("#mFind").disabled=false;
-  if(!r.ok){mine=null;$("#mForm").classList.remove("hidden");$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
+  if(!r.ok){mine=null;$("#mBackSlot").innerHTML="";$("#mForm").classList.remove("hidden");$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
   setServerNow(r.now);mine={name,pw,r};
   let h="";
   if(r.product){
@@ -737,8 +738,8 @@ $("#mFind").onclick=async()=>{
     (ut?'<span class="badge" style="color:var('+(ut==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(ut)+'</span>':'')+
     (r.product?'<span class="badge '+r.product.kind+'">'+PROD[r.product.kind]+'</span>':'')+'</div></div>';
   $("#mForm").classList.add("hidden");
-  $("#mOut").innerHTML='<div class="backrow"><button class="btn ghost small" id="mBack">← 다시 조회</button></div>'+
-    '<div class="card">'+head+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
+  $("#mBackSlot").innerHTML='<button class="btn ghost small" id="mBack">← 다시 조회</button>'; // 제목 "내 예약 확인"과 같은 줄 오른쪽
+  $("#mOut").innerHTML='<div class="card">'+head+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
   $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m));
@@ -950,7 +951,7 @@ function statusItem(u,kind){
 function statusHtml(){
   // 정액권·횟수권·일반을 각각 따로 된 상자로 보여 줍니다.
   const g=statusGroups(),sec=(k,title)=>'<div class="card"><div class="part" style="margin-top:0">'+title+'<small>'+g[k].length+'명</small></div>'+(g[k].length?g[k].map(x=>statusItem(x,k)).join(""):'<p class="hint">해당하는 이용자가 없습니다.</p>')+'</div>';
-  return '<h2 style="margin:4px 0 6px">이용자 현황</h2>'+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
+  return ''+(uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+
     sec("flat","정액권")+sec("count","횟수권")+sec("none","일반");
 }
 function callUser(u){
@@ -984,7 +985,7 @@ function userViewHtml(){
   }else{
     prod='<p class="hint" style="margin:0">사용 중인 정액권·횟수권이 없습니다.</p>'+(q?'<p class="hint">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'');
   }
-  return '<div class="card"><b>이용자 정보</b><div style="margin-top:6px"><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span></div>'+
+  return '<div class="card"><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span></div>'+
     '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
@@ -1007,7 +1008,7 @@ function userEditHtml(){
   }else{
     prod=(q?'<p class="hint" style="margin:0 0 8px">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'')+newProdFields("ue",u.type);
   }
-  return '<div class="card"><b>이용자 수정</b>'+typeChecks("ue",u.type)+
+  return '<div class="card">'+typeChecks("ue",u.type)+
     userFields("ue",u)+
     '<div class="part" style="margin-top:22px">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음 · 새로 추가할 수 있습니다')+'</small></div>'+prod+
     '<p class="hint">비밀번호를 비워 두면 그대로 유지됩니다. 이름이나 비밀번호를 변경하면 이 이용자의 확정 예약과 정액권·횟수권에도 동일하게 적용됩니다.</p><div id="ueMsg"></div><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button>'+
@@ -1058,7 +1059,7 @@ function bindUserEdit(){
 /* ===== 설정 > 관리자 비밀번호 변경(Supabase 계정 비밀번호) ===== */
 function doorHtml(){
   if(!A.codes)return '<p class="hint">불러오는 중입니다…</p>';
-  return '<div class="card"><b>출입 비밀번호</b><p class="hint">예약 확정·예약 변경 화면과 내 예약(앞으로의 예약이 있을 때)에 보입니다. 저장하면 바로 바뀝니다.</p>'+
+  return '<div class="card"><p class="hint" style="margin-top:0">예약 확정·예약 변경 화면과 내 예약(앞으로의 예약이 있을 때)에 보입니다. 저장하면 바로 바뀝니다.</p>'+
     DOOR_LABELS.map(([k,l])=>'<label for="d_'+k+'">'+l+' 비밀번호</label><input type="text" id="d_'+k+'" maxlength="20" autocomplete="off" value="'+esc(A.codes[k]||"")+'">').join("")+
     '<div id="dMsg"></div><button class="btn" id="dGo">저장</button></div>';
 }
@@ -1073,7 +1074,7 @@ function bindDoor(){
     $("#dMsg").innerHTML='<div class="msg ok">출입 비밀번호를 저장하였습니다.</div>';
   };
 }
-function setHtml(){return '<div class="card"><b>관리자 비밀번호 변경</b><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="current-password"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="new-password"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="new-password"><p class="hint">8자 이상, 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
+function setHtml(){return '<div class="card"><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="current-password"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="new-password"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="new-password"><p class="hint">8자 이상, 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
 function bindSet(){
   $("#sGo").onclick=async()=>{
     const c=$("#sCur").value,n=$("#sNew").value,n2=$("#sNew2").value;
@@ -1100,7 +1101,7 @@ function blockHtml2(){
   const t=seoulDate(),pad=n=>String(n).padStart(2,"0");
   const fmt=ts=>dateLabel(ts.slice(0,10))+" "+ts.slice(11,13)+":00";
   const items=A.blocks.map(g=>'<div class="item"><div class="row"><div><b>'+fmt(g.from)+' ~ '+fmt(g.to)+'</b><div class="hint">'+esc(g.reason||"사유 없음")+'</div></div><button class="btn danger small" data-bd="'+esc(g.group_id)+'">해제</button></div></div>').join("");
-  return '<div class="card"><b>이용 불가 시간 설정</b><div class="cols" style="grid-template-columns:1.5fr 1fr"><div><label for="bSD">시작 날짜</label><input type="date" id="bSD" value="'+t+'" min="'+t+'"></div><div><label for="bSH">시작 시각 (0~23)</label><input type="number" id="bSH" min="0" max="23" value="1"></div></div>'+
+  return '<div class="card"><div class="cols" style="grid-template-columns:1.5fr 1fr"><div><label for="bSD">시작 날짜</label><input type="date" id="bSD" value="'+t+'" min="'+t+'"></div><div><label for="bSH">시작 시각 (0~23)</label><input type="number" id="bSH" min="0" max="23" value="1"></div></div>'+
     '<div class="cols" style="grid-template-columns:1.5fr 1fr"><div><label for="bED">종료 날짜</label><input type="date" id="bED" value="'+t+'" min="'+t+'"></div><div><label for="bEH">종료 시각 (0~23)</label><input type="number" id="bEH" min="0" max="23" value="6"></div></div>'+
     '<p class="hint" style="margin:6px 0 0">종료 시각까지 이용 불가입니다.</p><p class="hint" id="bPrev"></p><label for="bReason">사유 (선택)</label><input type="text" id="bReason" maxlength="30" autocomplete="off" placeholder="예: 장비 점검"><div id="bMsg"></div><button class="btn" id="bGo">이용 불가로 설정</button></div><div class="card"><b>설정된 이용 불가</b>'+(items||'<p class="hint">설정된 이용 불가가 없습니다.</p>')+'</div>';
 }
@@ -1141,7 +1142,9 @@ function bindBlock2(){
 
 /* ===== 설정 화면 ===== */
 function settingsHtml(){
-  const back='<div class="backrow"><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
+  // 큰 제목과 [← 뒤로]를 한 줄에(v0.18.11, 뒤로 버튼은 오른쪽)
+  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호",proxy:"관리자 예약"}[setPage];
+  const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
   if(setPage==="status"){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
     return back+(editUser!==null?userEditHtml():viewUser!==null?userViewHtml():statusHtml());
