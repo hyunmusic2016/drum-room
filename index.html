@@ -184,7 +184,12 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 @keyframes fall{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
 @media(prefers-reduced-motion:reduce){.sheet.done *{animation:none!important;opacity:1}.ck circle,.ck path{stroke-dashoffset:0}.conf{display:none}}
 .hidden{display:none!important}
-.ver{text-align:right;font-size:11px;color:var(--sub);margin:28px 0 0;letter-spacing:.02em}
+.ver{font-size:11px;color:var(--sub);margin:0;letter-spacing:.02em}
+/* 맨 아래 오른쪽: 버전 + 관리자 페이지 아이콘(v0.16.6) */
+.foot{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:28px 0 0}
+.admin-ic{width:44px;height:44px;padding:0;border:0;background:transparent;color:var(--sub);border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.admin-ic svg{width:20px;height:20px}
+.admin-ic:hover,.admin-ic:focus-visible{color:var(--ink);background:var(--line)}
 </style>
 </head>
 <body>
@@ -209,7 +214,6 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
       <button class="btn" id="mFind">예약 확인</button>
     </div>
     <div id="mOut"></div>
-    <button class="btn ghost" id="toAdmin" style="margin-top:32px">관리자 페이지</button>
   </section>
 
   <section id="v-admin" class="hidden">
@@ -224,7 +228,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
     </div>
     <div id="adminPane" class="hidden"></div>
   </section>
-  <p class="ver" id="ver"></p>
+  <div class="foot"><p class="ver" id="ver"></p><button type="button" class="admin-ic" id="toAdmin" aria-label="관리자 페이지" title="관리자 페이지"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button></div>
 </div>
 
 
@@ -235,7 +239,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.5";
+const APP_VERSION="v0.16.6";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -642,11 +646,12 @@ const IDLE_MS=120000;let lastAct=Date.now();
 ["pointerdown","keydown","input","wheel","touchstart","scroll"].forEach(t=>window.addEventListener(t,()=>{lastAct=Date.now()},{capture:true,passive:true}));
 function idleReset(){
   closeSheet();$("#sheet").innerHTML="";
+  $("#aEmail").value="";$("#aPw").value="";
   mine=null;mineSeq++;$("#mName").value="";$("#mPw").value="";$("#mOut").innerHTML="";$("#mFind").disabled=false;
   curDate=null;go("book");window.scrollTo(0,0);if(document.activeElement)document.activeElement.blur();
 }
 setInterval(()=>{
-  if(Date.now()-lastAct<IDLE_MS||!$("#v-admin").classList.contains("hidden"))return;
+  if(Date.now()-lastAct<IDLE_MS||(adminOn&&!$("#v-admin").classList.contains("hidden")))return;
   const dirty=$("#v-book").classList.contains("hidden")||$("#bg").classList.contains("open")||curDate!==allowedDates()[0]||mine||$("#mName").value||$("#mPw").value;
   if(dirty){idleReset();lastAct=Date.now()}
 },5000);
