@@ -138,6 +138,10 @@ details.dgrp[open]>.dgrp-h::after{content:"▴"}
 .drow .why{color:var(--sub);font-size:13px}
 /* 관리자 예약 창: 이름으로 찾은 이용자 목록, 일반예약/슈퍼패스 선택 */
 #rBadge{font-size:13px;font-weight:400}
+/* 이름 | 비밀번호를 한 줄에(v0.18.6, 예약 입력 창·내 예약) */
+.idpw{display:grid;grid-template-columns:1.4fr 1fr;gap:8px;align-items:end}
+.idpw>div{min-width:0}
+div#rBadge:not(:empty){margin-top:6px}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
 .who input{width:20px;height:20px;margin:0;flex:none}
 .mode-box{border:1px solid var(--line);border-radius:12px;padding:6px 12px;margin-top:16px}
@@ -232,10 +236,10 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
   <section id="v-mine" class="hidden">
     <h2>내 예약 확인</h2>
     <div class="card" id="mForm">
-      <label for="mName">이름</label>
-      <input type="text" id="mName" autocomplete="off" placeholder="예약할 때 입력한 이름">
-      <label for="mPw">비밀번호 4자리</label>
-      <input type="password" id="mPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">
+      <div class="idpw">
+        <div><label for="mName">이름</label><input type="text" id="mName" autocomplete="off" placeholder="예약한 이름"></div>
+        <div><label for="mPw">비밀번호 4자리</label><input type="password" id="mPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리"></div>
+      </div>
       <button class="btn" id="mFind">예약 확인</button>
     </div>
     <div id="mOut"></div>
@@ -264,7 +268,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.5";
+const APP_VERSION="v0.18.6";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -429,10 +433,11 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   $("#sheet").innerHTML=
    '<div class="row" style="align-items:flex-start"><div>'+('<p class="sh-kind" style="color:var('+(EXT?'--ext-text':'--stu-text')+')">'+(EXT?'외부 이용자 예약하기':'재원생 예약하기')+'</p>')+'<h2 style="margin:0">'+(D===allowedDates()[0]?'<span class="dayw">오늘</span> ':'<span class="dayw">내일</span> ')+dateLabel(D)+' <span style="white-space:nowrap">'+hourLabel(h)+'</span></h2></div>'+'<button class="btn ghost small" id="backCh">← 뒤로</button>'+'</div>'+
    (EXT?'<button class="btn first" id="firstGo">처음 오시는 분 안내 ›</button>':'')+
-   '<label for="rName">이름 (본명) <span id="rBadge"></span></label><input type="text" id="rName" autocomplete="off" placeholder="홍길동">'+
+   '<div class="idpw"><div><label for="rName">이름 (본명)</label><input type="text" id="rName" autocomplete="off" placeholder="홍길동"></div>'+
+   '<div><label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리"></div></div>'+
+   '<div id="rBadge"></div>'+
    ('<p class="hint warn">'+(EXT?'통화 시 등록하신 이름을 입력하십시오.':'원생 본명을 입력하십시오. 원생이 아닌 경우 관리자가 예약을 취소할 수 있습니다.')+'</p>')+
-   '<label for="rPw">비밀번호 4자리</label><input type="password" id="rPw" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="숫자 4자리">'+
-   ('<p class="hint">'+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
+   ('<p class="hint">비밀번호: '+(EXT?'연락하신 전화번호 뒤 4자리를 입력하십시오.':'예약 변경, 취소 시 필요합니다.')+'</p>')+
    ('<label class="check"><input type="checkbox" id="rC"><span>예약 확인·변경·취소를 위한 이름·비밀번호 수집에 동의합니다. 예약 기록은 이용일로부터 '+KEEP_DAYS+'일 뒤 삭제됩니다(정액권·횟수권 예약은 상품 종료 '+KEEP_DAYS+'일 뒤).</span></label>')+
    '<div id="rMsg"></div><button class="btn'+(EXT?' ext':' stu')+'" id="rGo">예약하기</button>';
   $("#bg").classList.add("open");$("#rName").focus();
