@@ -68,11 +68,11 @@ input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);
 .btn.stu{background:var(--stu-btn);color:#fff}
 .btn.call{background:#1e8e4e;color:#fff}
 details.hist{border:1px solid var(--line);border-radius:12px;padding:0 14px;margin-top:12px;background:var(--surface)}
-details.hist summary{list-style:none;cursor:pointer;min-height:50px;display:flex;align-items:center;gap:6px;font-weight:700}
-details.hist summary::-webkit-details-marker{display:none}
-details.hist summary small{font-weight:400;color:var(--sub)}
-details.hist summary::after{content:"펼치기 ▾";margin-left:auto;font-size:13px;font-weight:500;color:var(--accent-text)}
-details.hist[open] summary::after{content:"접기 ▴"}
+details.hist>summary{list-style:none;cursor:pointer;min-height:50px;display:flex;align-items:center;gap:6px;font-weight:700}
+details.hist>summary::-webkit-details-marker{display:none}
+details.hist>summary small{font-weight:400;color:var(--sub)}
+details.hist>summary::after{content:"펼치기 ▾";margin-left:auto;font-size:13px;font-weight:500;color:var(--accent-text)}
+details.hist[open]>summary::after{content:"접기 ▴"}
 details.hist[open]{padding-bottom:8px}
 details.hist .item b{font-size:15px}
 .ro{min-height:48px;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);overflow-wrap:anywhere}
@@ -118,13 +118,17 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .admin-warn svg{flex:none;width:28px;height:28px}
 /* 관리자 지난 예약·취소된 예약: 날짜별 묶음 + 한 줄 요약(v0.16.9) */
 .dgrp{margin-top:10px}
-.dgrp-h{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:800}
-.dgrp-h small{font-weight:400;color:var(--sub)}
+.dgrp-h{display:flex;gap:8px;align-items:center;background:var(--bg);border-radius:8px;padding:0 10px;min-height:40px;font-size:14px;font-weight:800;list-style:none;cursor:pointer}
+.dgrp-h::-webkit-details-marker{display:none}
+.dgrp-h small{font-weight:400;color:var(--sub);margin-left:auto}
+.dgrp-h::after{content:"▾";color:var(--accent-text);font-size:13px}
+details.dgrp[open]>.dgrp-h::after{content:"▴"}
+.hrow{display:flex;gap:8px;align-items:center;margin:4px 0 2px}
+.hrow .hsearch{margin:0;flex:1;min-width:0}
 .drow{display:flex;gap:10px;align-items:baseline;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
 .drow:last-child{border-bottom:0}
 .drow .t{flex:none;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
 .drow .why{color:var(--sub);font-size:13px}
-.hsearch{margin:4px 0 2px}
 /* 관리자 예약 창: 이름으로 찾은 이용자 목록, 일반예약/슈퍼패스 선택 */
 #rBadge{font-size:13px;font-weight:400}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
@@ -248,7 +252,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.10";
+const APP_VERSION="v0.16.11";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1113,22 +1117,26 @@ function resItem(r){
   return '<div class="item"><div class="row" style="flex-wrap:wrap"><div><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+(r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':"")+(r.super?'<span class="badge super">슈퍼패스</span>':"")+'<div class="hint">'+dateLabel(r.date)+' '+hourLabel(r.hour)+' · <span class="'+(r.status==="cancelled"?"status-cancel":"")+'">'+stLabel(r.status)+'</span>'+(r.reason?" · "+esc(r.reason):"")+'</div></div>'+(r.status==="confirmed"&&!r.ended?'<div style="display:flex;gap:6px"><button class="btn danger small" data-ac="'+r.id+'">취소</button></div>':"")+'</div></div>';
 }
 /* 지난 예약·취소된 예약을 날짜별로 묶어 한 줄씩(날짜는 최근 순, 같은 날은 시간 순) */
-function dayGroups(list,cancelled){
+function dayGroups(list,cancelled,id){
   if(!list.length)return '<p class="hint">'+(cancelled?'취소된 예약이 없습니다.':'지난 예약이 없습니다.')+'</p>';
   const by={};list.forEach(r=>(by[r.date]=by[r.date]||[]).push(r));
   return Object.keys(by).sort().reverse().map(d=>{
     const rs=by[d].sort((a,b)=>a.hour-b.hour);
-    return '<div class="dgrp"><div class="dgrp-h">'+dateLabel(d)+'<small class="cnt">'+rs.length+'건</small></div>'+rs.map(r=>
+    return '<details class="dgrp" data-d="'+d+'"'+(histOpen[id].has(d)?' open':'')+'><summary class="dgrp-h">'+dateLabel(d)+'<small class="cnt">'+rs.length+'건</small></summary>'+rs.map(r=>
       '<div class="drow" data-n="'+esc(normName(r.name))+'"><span class="t">'+hourLabel(r.hour)+'</span><span><b style="color:'+(r.ext?'var(--ext-text)':'var(--stu-text)')+'">'+esc(r.name)+'</b>'+
       (r.prod?'<span class="badge '+r.prod+'">'+PROD[r.prod]+'</span>':'')+(r.super?'<span class="badge super">슈퍼패스</span>':'')+
-      (cancelled?' <span class="why">· '+esc(r.reason||'취소')+'</span>':'')+'</span></div>').join("")+'</div>';
+      (cancelled?' <span class="why">· '+esc(r.reason||'취소')+'</span>':'')+'</span></div>').join("")+'</details>';
   }).join("");
 }
 const normName=n=>String(n||"").replace(/\s+/g,"").toLowerCase();
 /* 지난 예약·취소된 예약 이름 검색(v0.16.10): 입력한 글자가 이름에 들어간 줄만 보이고, 날짜 묶음의 건수도 맞춰 바뀝니다. */
 const histQ={qPast:"",qCanc:""};
+/* 날짜별 접기·펼치기(v0.16.11, 처음엔 모두 접힘). 펼친 날짜를 기억해 자동 새로고침 뒤에도 유지.
+   검색 중에는 찾은 날짜를 자동으로 펼쳐 보여 주고, 검색어를 지우면 원래 상태로 돌아갑니다. */
+const histOpen={qPast:new Set(),qCanc:new Set()};
 function histSearch(id){
-  return '<input type="search" class="hsearch" id="'+id+'" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(histQ[id])+'">'+
+  return '<div class="hrow"><input type="search" class="hsearch" id="'+id+'" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(histQ[id])+'">'+
+    '<button type="button" class="btn ghost small" id="'+id+'All">전부 펼치기</button></div>'+
     '<p class="hint hidden" id="'+id+'None">찾는 이름의 예약이 없습니다.</p>';
 }
 function applyHistQ(id,box){
@@ -1136,8 +1144,25 @@ function applyHistQ(id,box){
   $(box).querySelectorAll(".dgrp").forEach(g=>{
     let n=0;g.querySelectorAll(".drow").forEach(r=>{const hit=!q||r.dataset.n.includes(q);r.classList.toggle("hidden",!hit);if(hit)n++});
     g.classList.toggle("hidden",!n);g.querySelector(".cnt").textContent=n+"건";if(n)any=true;
+    g.open=q?n>0:histOpen[id].has(g.dataset.d);
   });
   $("#"+id+"None").classList.toggle("hidden",any||!$(box).querySelector(".dgrp"));
+  allBtn(id,box);
+}
+const shownGroups=box=>[...$(box).querySelectorAll(".dgrp")].filter(g=>!g.classList.contains("hidden"));
+function allBtn(id,box){const gs=shownGroups(box),b=$("#"+id+"All");b.textContent=gs.length&&gs.every(g=>g.open)?"전부 접기":"전부 펼치기";b.disabled=!gs.length}
+function bindHist(id,box){
+  $("#"+id).oninput=()=>{histQ[id]=$("#"+id).value;applyHistQ(id,box)};
+  $(box).querySelectorAll(".dgrp").forEach(g=>g.addEventListener("toggle",()=>{
+    if(!histQ[id].trim()){if(g.open)histOpen[id].add(g.dataset.d);else histOpen[id].delete(g.dataset.d)}
+    allBtn(id,box);
+  }));
+  $("#"+id+"All").onclick=()=>{
+    const gs=shownGroups(box),open=!gs.every(g=>g.open);
+    gs.forEach(g=>{g.open=open;if(!histQ[id].trim()){if(open)histOpen[id].add(g.dataset.d);else histOpen[id].delete(g.dataset.d)}});
+    allBtn(id,box);
+  };
+  applyHistQ(id,box);
 }
 function renderAdmin(){
   if(!A.loaded){$("#adminPane").innerHTML='<p class="hint">불러오는 중입니다…</p>';return}
@@ -1151,13 +1176,11 @@ function renderAdmin(){
    '<div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+
    (up.length?up.map(resItem).join(""):'<p class="hint">예정된 예약이 없습니다.</p>')+'</div>'+
    '<p class="hint" style="margin-top:14px">지난 예약과 취소된 예약은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
-   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qPast")+dayGroups(past,false)+'</details>'+
-   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qCanc")+dayGroups(canc,true)+'</details>'+
+   '<details class="hist" id="hPast"'+wasOpen("hPast")+'><summary>지난 예약 <small>'+past.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qPast")+dayGroups(past,false,"qPast")+'</details>'+
+   '<details class="hist" id="hCanc"'+wasOpen("hCanc")+'><summary>취소된 예약 <small>'+canc.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+histSearch("qCanc")+dayGroups(canc,true,"qCanc")+'</details>'+
    '</div></div><div id="sec-ext">'+userHtml()+'</div><div id="sec-block">'+settingsHtml()+'</div>'+
    '<div style="display:flex;justify-content:flex-end;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)"><button class="btn danger small" id="out" style="padding:0 22px">로그아웃</button></div>';
-  [["qPast","#hPast"],["qCanc","#hCanc"]].forEach(([id,box])=>{
-    $("#"+id).oninput=()=>{histQ[id]=$("#"+id).value;applyHistQ(id,box)};applyHistQ(id,box);
-  });
+  bindHist("qPast","#hPast");bindHist("qCanc","#hCanc");
   if(fo){const el=$("#"+fo);el.focus();el.setSelectionRange(el.value.length,el.value.length)}
   $("#out").onclick=async()=>{try{await sb.auth.signOut()}catch(e){}leaveAdmin()};
   document.querySelectorAll("[data-ac]").forEach(b=>b.onclick=async()=>{
