@@ -264,7 +264,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.1";
+const APP_VERSION="v0.18.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -419,6 +419,8 @@ async function showCodes(sel,name,pw,still){
   const r=await rpc("my_codes",{p_name:name,p_pw:pw});
   const el=$(sel);if(el&&r.ok&&r.codes&&(!still||still()))el.innerHTML=codesHtml(r.codes);
 }
+/* 예약 확정·시간 변경 완료 화면의 출입 비밀번호 아래 안내(v0.18.2) */
+const DONE_NOTE='<p class="hint" style="margin-top:10px">이 화면을 캡처해 두시면 출입 비밀번호를 바로 확인하실 수 있습니다.<br>예약 시간 확인·변경·취소, 출입 비밀번호(정문·연습실·화장실), 정액권·횟수권 정보는 ‘내 예약’에서 이름과 비밀번호로 조회하실 수 있습니다.</p>';
 function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card rcard"><div class="nm">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div class="dt">'+dateLabel(date)+'</div><div class="tm">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
@@ -466,7 +468,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       return;
     }
     const kind=doneKind(r.ext);
-    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<div id="codesBox"></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p>');
+    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<div id="codesBox"></div>'+DONE_NOTE);
     burst(kind);$("#ok").onclick=closeSheet;
     showCodes("#codesBox",name,pw);
     selHour=null;curDate=allowedDates()[0];refreshBook();autoHome();
@@ -746,7 +748,7 @@ async function openMoveSheet(id){
       const res=await rpc("move_own",{p_id:id,p_name:mine.name,p_pw:mine.pw,p_date:md,p_hour:h});
       if(!res.ok){await loadBoard();msg='<div class="msg err">'+esc(res.msg)+'</div>';draw();return}
       refreshBook();$("#mFind").click();
-      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("시간이 변경되었습니다",res.name,null,res.date,res.hour,'<div id="codesBox"></div>');
+      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("시간이 변경되었습니다",res.name,null,res.date,res.hour,'<div id="codesBox"></div>'+DONE_NOTE);
       showCodes("#codesBox",mine.name,mine.pw);
       burst(kind);$("#ok").onclick=closeSheet;
     });
