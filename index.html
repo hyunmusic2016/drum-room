@@ -235,7 +235,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.16.3";
+const APP_VERSION="v0.16.4";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -554,7 +554,7 @@ function histHtml(resList,oldProds){
   const ps=[...oldProds].sort((a,b)=>b.end.localeCompare(a.end));
   const pItems=ps.map(q=>'<div class="item"><span class="badge '+q.kind+'" style="margin-left:0">'+PROD[q.kind]+'</span> <b>'+q.start+' ~ '+q.end+'</b><div class="hint">'+(q.kind==="count"?'총 '+q.total+'회 중 '+q.used+'회 사용':'하루 '+q.limit+'회')+' · 만료</div></div>').join("");
   return '<p class="hint" style="margin-top:14px">예약 기록과 지난 정액권·이용권은 '+KEEP_DAYS+'일 동안 보관된 뒤 삭제됩니다.</p>'+
-    '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
+    '<details class="hist"><summary>예약 기록 <small>'+rs.length+'건</small></summary><p class="hint" style="margin:8px 0 4px">최근 '+KEEP_DAYS+'일 안의 예약만 볼 수 있습니다.</p>'+(rItems||'<p class="hint">예약 기록이 없습니다.</p>')+'</details>'+
     '<details class="hist"><summary>지난 정액권·이용권 <small>'+ps.length+'건</small></summary>'+(pItems||'<p class="hint">만료된 정액권·이용권이 없습니다.</p>')+'</details>';
 }
 function doneKind(ext){const k=ext?"ext":"stu";$("#sheet").classList.remove("daycol");$("#sheet").classList.add("done",k);return k}
