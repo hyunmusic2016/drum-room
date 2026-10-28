@@ -143,6 +143,7 @@ details.dgrp[open]>.dgrp-h::after{content:"▴"}
 .idpw>div{min-width:0}
 div#rBadge:not(:empty){margin-top:6px}
 /* 내 예약 결과 맨 위: 이름 + 구분 배지 + 정액권/횟수권 배지(v0.18.8) */
+.backrow{display:flex;justify-content:flex-end;margin-bottom:10px}
 .mhead{text-align:center;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--line)}
 .mhead b{display:block;font-size:22px;font-weight:900}
 .mhead .bdg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:4px}
@@ -273,7 +274,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.9";
+const APP_VERSION="v0.18.10";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -736,7 +737,7 @@ $("#mFind").onclick=async()=>{
     (ut?'<span class="badge" style="color:var('+(ut==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(ut)+'</span>':'')+
     (r.product?'<span class="badge '+r.product.kind+'">'+PROD[r.product.kind]+'</span>':'')+'</div></div>';
   $("#mForm").classList.add("hidden");
-  $("#mOut").innerHTML='<button class="btn ghost small" id="mBack" style="margin-bottom:10px">← 다시 조회</button>'+
+  $("#mOut").innerHTML='<div class="backrow"><button class="btn ghost small" id="mBack">← 다시 조회</button></div>'+
     '<div class="card">'+head+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
   $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
@@ -1140,7 +1141,7 @@ function bindBlock2(){
 
 /* ===== 설정 화면 ===== */
 function settingsHtml(){
-  const back='<button class="btn ghost small" id="setBack" style="margin-bottom:10px">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button>';
+  const back='<div class="backrow"><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
   if(setPage==="status"){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
     return back+(editUser!==null?userEditHtml():viewUser!==null?userViewHtml():statusHtml());
