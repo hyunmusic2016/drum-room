@@ -112,8 +112,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .sheet.daycol{border:4px solid var(--accent-strong)}
 .dayw{color:var(--accent-text)}
 /* 관리자 예약 화면 맨 위 경고 띠(빨강) */
-.admin-warn{display:flex;gap:10px;align-items:center;border:2px solid var(--danger);background:var(--surface);background:color-mix(in srgb,var(--danger) 12%,var(--surface));color:var(--danger);border-radius:12px;padding:12px 14px;margin:0 0 12px}
-.admin-warn b{font-size:21px;font-weight:900;display:block}
+.admin-warn{display:flex;gap:10px;align-items:center;justify-content:center;text-align:center;border:2px solid var(--danger);background:var(--surface);background:color-mix(in srgb,var(--danger) 12%,var(--surface));color:var(--danger);border-radius:12px;padding:12px 14px;margin:0 0 12px}
+.admin-warn b{font-size:18px;font-weight:400;display:block}
 .admin-warn small{display:block;font-size:13px;color:var(--ink);opacity:.85;margin-top:2px}
 .admin-warn svg{flex:none;width:28px;height:28px}
 /* 관리자 지난 예약·취소된 예약: 날짜별 묶음 + 한 줄 요약(v0.16.9) */
@@ -276,7 +276,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.19.1";
+const APP_VERSION="v0.19.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
