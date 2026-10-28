@@ -160,6 +160,7 @@
 - **2026-10-28 사용자: Supabase에 009 실행 완료. 자동 정리 확인함(009 결과):** pg_cron 켜짐, 작업 `drum-room-cleanup`(`10 18 * * *` UTC = 매일 03:10 서울, active), 최근 실행 2026-10-28 03:10(서울) **succeeded**(009 전이라 3개월 기준으로 실행됨). 30일 기준 첫 정리는 2026-10-29 03:10(서울). 남은 일 목록의 ④ pg_cron 확인은 완료.
 - **2026-10-28 결정(사용자): 아임웹 안에 넣는 배포(방법 A)는 포기.** 예약 화면은 GitHub Pages 주소(`https://hyunmusic2016.github.io/drum-room/`)로 직접 연다. `imweb-snippet.html`과 화면 안의 아임웹용 코드(`EMBED`, `placeSheet`, `postHeight` 등)는 다른 페이지 안에 들어갔을 때만 동작하므로 그대로 둬도 직접 열기에는 영향 없음(정리 여부는 사용자 결정 대기). 남은 일 목록의 아임웹 확인 항목은 없어짐.
 - **2026-10-28 사용자: Supabase에 010 실행 완료.** 공개용 키로 확인함: 예약·시간 변경 함수는 정상 응답(익명 호출 가능 유지), 관리자 함수·상품 확인 함수는 익명 호출 거부(권한 유지). 바뀐 "횟수권" 문구 자체는 실제 데이터를 만들어야 나와서 실제 서버에서는 아직 못 봄(로컬 시험에서 확인).
+- **2026-10-28 사용자: Supabase에 012 실행 완료(011도 실행된 상태).** 공개용 키로 확인함: `my_reservations`·`my_codes` 정상 응답(예약 없는 이름엔 출입 비밀번호 null), `door_codes`·`admin_door_codes`는 익명 호출 거부. `user_type`과 실제 출입 비밀번호 표시는 실제 예약 데이터로는 아직 못 봄.
 - 작업 환경 메모: 이 클라우드 컨테이너는 `github.io`, `hyunmusic.com`에 접속할 수 없다(네트워크 정책). `*.supabase.co`는 2026-10-27 허용됨. PostgreSQL 16 프로그램(`/usr/lib/postgresql/16`)은 컨테이너에 있어 로컬 SQL 시험이 가능하다. 데이터 폴더는 postgres 사용자 홈(`/var/lib/postgresql/drumtest`)에 둔다(스크래치 폴더는 권한이 바뀌어 서버가 멈춘 적 있음). `cdn.jsdelivr.net`은 컨테이너에서 막혀 있어, 브라우저 시험 때는 npm으로 받은 supabase-js를 가로채 넣는다. 실제 Supabase 시험은 Chromium을 `HTTPS_PROXY` 프록시로 띄우고 `ignoreHTTPSErrors`로 한다.
 
 ---
