@@ -275,7 +275,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.18.11";
+const APP_VERSION="v0.18.12";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1143,7 +1143,7 @@ function bindBlock2(){
 /* ===== 설정 화면 ===== */
 function settingsHtml(){
   // 큰 제목과 [← 뒤로]를 한 줄에(v0.18.11, 뒤로 버튼은 오른쪽)
-  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호",proxy:"관리자 예약"}[setPage];
+  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경",proxy:"관리자 예약"}[setPage];
   const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
   if(setPage==="status"){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
@@ -1154,7 +1154,7 @@ function settingsHtml(){
   if(setPage==="door")return back+doorHtml();
   if(setPage==="proxy")return back+proxyHtml();
   const mi=(k,l)=>'<div class="item"><button data-sp="'+k+'" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">'+l+'</button></div>';
-  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("proxy","관리자 예약")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호")+mi("pw","관리자 비밀번호 변경")+'</div>';
+  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("proxy","관리자 예약")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
 }
 function bindSettings(){
   document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="proxy"||setPage==="door")reloadAdmin()});
