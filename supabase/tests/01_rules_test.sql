@@ -205,6 +205,22 @@ select (select (x->>'id')::bigint from jsonb_array_elements((public.my_reservati
 select test.ok((public.move_own(:sk, '이강현', '2222', '2026-10-28', 6))->>'ok' = 'true', '동명이인 이용자 예약이 있어도 시간 변경 가능(008)');
 reset role; set role authenticated;
 
+-- ===== 11-3. 출입 비밀번호 (011) =====
+reset role; set role anon;
+select test.ok((public.my_codes('이강현', '2222'))->'codes'->>'gate' = '0000', '앞으로의 예약이 있으면 출입 비밀번호 받음');
+select test.ok((public.my_codes('이강현', '9999'))->'codes' = 'null'::jsonb, '비밀번호가 틀리면 출입 비밀번호 없음');
+select test.ok((public.my_codes('예약없음', '1111'))->'codes' = 'null'::jsonb, '앞으로의 예약이 없으면 출입 비밀번호 없음');
+select test.denied($$select public.door_codes()$$, '익명은 출입 비밀번호 내부 함수를 부를 수 없음');
+select test.denied($$select public.admin_door_codes()$$, '익명은 관리자 출입 비밀번호 보기 불가');
+select test.denied($$select public.admin_set_door_codes('{}')$$, '익명은 출입 비밀번호 변경 불가');
+reset role; set role authenticated;
+select test.ok((public.admin_set_door_codes('{"gate":"1234","room":"","toilet":"9"}'))->>'msg' like '연습실 비밀번호를%', '빈 비밀번호는 저장 안 됨');
+select test.ok((public.admin_set_door_codes('{"gate":" 1234 ","room":"5678*","toilet":"9012#"}'))->'codes'->>'gate' = '1234', '관리자 출입 비밀번호 변경(앞뒤 공백 제거)');
+select test.ok((public.admin_door_codes())->'codes'->>'toilet' = '9012#', '관리자 출입 비밀번호 보기');
+reset role; set role anon;
+select test.ok((public.my_codes('이강현', '2222'))->'codes'->>'room' = '5678*', '바뀐 출입 비밀번호가 바로 보임');
+reset role; set role authenticated;
+
 -- ===== 12. 이용 불가 설정 =====
 select test.ok((public.admin_block('2026-10-28', 9, '2026-10-28', 12, '점검', false))->>'need_confirm' = 'true', '이용 불가 기간에 예약 있으면 확인 요청');
 select test.ok((public.admin_block('2026-10-28', 9, '2026-10-28', 12, '점검', true))->>'slots' = '3', '확인하면 3칸 설정');

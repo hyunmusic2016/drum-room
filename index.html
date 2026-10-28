@@ -123,6 +123,10 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 .dgrp-h small{font-weight:400;color:var(--sub);margin-left:auto}
 .dgrp-h::after{content:"▾";color:var(--accent-text);font-size:13px}
 details.dgrp[open]>.dgrp-h::after{content:"▴"}
+.codes{border:2px solid var(--accent-strong);border-radius:12px;padding:10px 14px;margin:12px 0 0;background:var(--surface)}
+.codes>b{display:block;font-size:14px;margin-bottom:4px}
+.crow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid var(--line);font-size:15px}
+.crow b{font-size:20px;font-weight:900;letter-spacing:.06em;font-variant-numeric:tabular-nums}
 .hrow{display:flex;gap:8px;align-items:center;margin:4px 0 2px}
 .hrow .hsearch{margin:0;flex:1;min-width:0;height:44px;padding:0 12px}
 .hrow .btn{height:44px;min-height:44px;border-radius:10px;font-size:14px;font-weight:700}
@@ -253,7 +257,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.17.1";
+const APP_VERSION="v0.18.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -400,6 +404,14 @@ function renderBook(){
   updateBar();
 }
 
+/* 출입 비밀번호(v0.17.2): 서버(011)가 아직 끝나지 않은 확정 예약이 있는 사람에게만 줍니다.
+   비밀번호는 화면 코드·GitHub에 넣지 않고, 관리자가 설정 > 출입 비밀번호에서 바꿉니다. */
+const DOOR_LABELS=[["gate","정문"],["room","연습실"],["toilet","화장실"]];
+function codesHtml(c){return c?'<div class="codes"><b>출입 비밀번호</b>'+DOOR_LABELS.map(([k,l])=>'<div class="crow"><span>'+l+' 비밀번호</span><b>'+esc(c[k]||"")+'</b></div>').join("")+'</div>':""}
+async function showCodes(sel,name,pw,still){
+  const r=await rpc("my_codes",{p_name:name,p_pw:pw});
+  const el=$(sel);if(el&&r.ok&&r.codes&&(!still||still()))el.innerHTML=codesHtml(r.codes);
+}
 function doneHtml(title,name,prod,date,hour,note){
   return '<svg class="ck" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><path d="M26 44l12 12 22-26"/></svg><h2>'+title+'</h2><div class="card"><div style="font-size:22px;font-weight:900">'+esc(name)+(prod?'<i class="badge '+prod+'">'+PROD[prod]+'</i>':"")+'</div><div>'+dateLabel(date)+'</div><div style="font-size:20px;font-weight:700">'+hourLabel(hour)+'</div></div>'+(note||"")+'<button class="btn" id="ok">확인</button>';
 }
@@ -447,8 +459,9 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       return;
     }
     const kind=doneKind(r.ext);
-    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p>');
+    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<div id="codesBox"></div><p class="hint">취소하려면 ‘내 예약’에서 이름과 비밀번호를 입력하십시오. 이 화면을 캡처해 두시기 바랍니다.</p>');
     burst(kind);$("#ok").onclick=closeSheet;
+    showCodes("#codesBox",name,pw);
     selHour=null;curDate=allowedDates()[0];refreshBook();autoHome();
   };
 }
@@ -693,7 +706,9 @@ $("#mFind").onclick=async()=>{
   const now=r.list.filter(x=>!x.ended); // 지난 예약은 아래 '예약 기록'에서 봅니다.
   if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
   h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="cancelled"?"status-cancel":"")+'">'+stLabel(x.status)+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="confirmed"&&!x.started?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">시간 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
-  $("#mOut").innerHTML='<div class="card">'+h+'</div>'+histHtml(r.list,r.old_products||[]);
+  const hasUp=now.some(x=>x.status==="confirmed");
+  $("#mOut").innerHTML='<div class="card">'+(hasUp?'<div id="mCodes"></div>':'')+h+'</div>'+histHtml(r.list,r.old_products||[]);
+  if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m));
   document.querySelectorAll("[data-c]").forEach(b=>b.onclick=async()=>{
     if(!confirm("이 예약을 취소하시겠습니까?"))return;
@@ -724,7 +739,8 @@ async function openMoveSheet(id){
       const res=await rpc("move_own",{p_id:id,p_name:mine.name,p_pw:mine.pw,p_date:md,p_hour:h});
       if(!res.ok){await loadBoard();msg='<div class="msg err">'+esc(res.msg)+'</div>';draw();return}
       refreshBook();$("#mFind").click();
-      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("시간이 변경되었습니다",res.name,null,res.date,res.hour);
+      const kind=doneKind(res.ext);$("#sheet").innerHTML=doneHtml("시간이 변경되었습니다",res.name,null,res.date,res.hour,'<div id="codesBox"></div>');
+      showCodes("#codesBox",mine.name,mine.pw);
       burst(kind);$("#ok").onclick=closeSheet;
     });
   };
@@ -781,6 +797,7 @@ async function reloadOnce(){
   }else A.detail=null;
   if(setPage==="block"){const b=await rpc("admin_blocks");A.blocks=b.ok?b.list:[]}
   if(setPage==="proxy")await loadBoard();
+  if(setPage==="door"){const c=await rpc("admin_door_codes");A.codes=c.ok?c.codes:null}
   A.loaded=true;
   if(adminOn)renderAdmin();
 }
@@ -1007,6 +1024,23 @@ function bindUserEdit(){
 }
 
 /* ===== 설정 > 관리자 비밀번호 변경(Supabase 계정 비밀번호) ===== */
+function doorHtml(){
+  if(!A.codes)return '<p class="hint">불러오는 중입니다…</p>';
+  return '<div class="card"><b>출입 비밀번호</b><p class="hint">예약 확정·시간 변경 화면과 내 예약(앞으로의 예약이 있을 때)에 보입니다. 저장하면 바로 바뀝니다.</p>'+
+    DOOR_LABELS.map(([k,l])=>'<label for="d_'+k+'">'+l+' 비밀번호</label><input type="text" id="d_'+k+'" maxlength="20" autocomplete="off" value="'+esc(A.codes[k]||"")+'">').join("")+
+    '<div id="dMsg"></div><button class="btn" id="dGo">저장</button></div>';
+}
+function bindDoor(){
+  if(!$("#dGo"))return;
+  $("#dGo").onclick=async()=>{
+    const p={};DOOR_LABELS.forEach(([k])=>p[k]=$("#d_"+k).value);
+    $("#dGo").disabled=true;const r=await rpc("admin_set_door_codes",{p});if($("#dGo"))$("#dGo").disabled=false;
+    if(r.auth){adminExpired();return}
+    if(!r.ok){$("#dMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
+    A.codes=r.codes;DOOR_LABELS.forEach(([k])=>$("#d_"+k).value=r.codes[k]);
+    $("#dMsg").innerHTML='<div class="msg ok">출입 비밀번호를 저장하였습니다.</div>';
+  };
+}
 function setHtml(){return '<div class="card"><b>관리자 비밀번호 변경</b><label for="sCur">현재 비밀번호</label><input type="password" id="sCur" autocomplete="current-password"><label for="sNew">새 비밀번호</label><input type="password" id="sNew" autocomplete="new-password"><label for="sNew2">새 비밀번호 확인</label><input type="password" id="sNew2" autocomplete="new-password"><p class="hint">8자 이상, 길고 추측하기 어려운 비밀번호를 사용하십시오.</p><div id="sMsg"></div><button class="btn" id="sGo">비밀번호 변경</button></div>'}
 function bindSet(){
   $("#sGo").onclick=async()=>{
@@ -1080,16 +1114,18 @@ function settingsHtml(){
   }
   if(setPage==="block")return back+blockHtml2();
   if(setPage==="pw")return back+setHtml();
+  if(setPage==="door")return back+doorHtml();
   if(setPage==="proxy")return back+proxyHtml();
   const mi=(k,l)=>'<div class="item"><button data-sp="'+k+'" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">'+l+'</button></div>';
-  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("proxy","관리자 예약")+mi("block","이용 불가 시간 설정")+mi("pw","관리자 비밀번호 변경")+'</div>';
+  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("proxy","관리자 예약")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호")+mi("pw","관리자 비밀번호 변경")+'</div>';
 }
 function bindSettings(){
-  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="proxy")reloadAdmin()});
+  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="proxy"||setPage==="door")reloadAdmin()});
   const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else if(viewUser!==null){viewUser=null;A.detail=null}else{setPage=null}uFlash="";renderAdmin()};
   if(setPage==="status"){if(editUser!==null&&A.detail)bindUserEdit();else if(viewUser!==null&&A.detail)bindUserView();else if(viewUser===null)bindStatus()}
   if(setPage==="block")bindBlock2();
   if(setPage==="pw")bindSet();
+  if(setPage==="door")bindDoor();
   if(setPage==="proxy")renderProxy();
 }
 function tabBtns(){return [["list","예약 목록"],["ext","이용자 등록"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}

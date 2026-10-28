@@ -14,6 +14,8 @@
 8. 큰 변경 전에는 계획을 먼저 보여주고 확인을 받는다.
 9. **프런트엔드(`index.html` 등 화면 파일, v0.14.0부터 실제 화면은 `index.html`)를 고칠 때마다 `APP_VERSION`을 올리고** 아래 "화면 버전 기록"에 한 줄 적는다. 작은 수정은 마지막 숫자(v0.1.1→v0.1.2), 기능 추가·큰 화면 변경은 가운데 숫자(v0.1.x→v0.2.0), 실제 서버 연결 후 정식 오픈은 v1.0.0. 버전은 화면 맨 아래 오른쪽에 작게 표시된다.
 
+11. **출입 비밀번호(정문·연습실·화장실)는 서버에만 저장한다(2026-10-28).** 화면 코드·GitHub·CLAUDE.md에 실제 비밀번호를 적지 않는다. 사용자가 비밀번호 변경을 요청하면 관리자 > 설정 > 출입 비밀번호에서 직접 바꾸도록 안내한다(저장 즉시 예약 확정·시간 변경·내 예약 화면 모두에 반영됨). 비밀번호가 보이는 화면을 새로 만들면 같은 `codesHtml`/`showCodes`를 쓴다.
+
 10. **이용자 등록 폼과 이용자 수정 폼은 항상 같게 유지한다(2026-10-26 사용자 요청).** 이용자 등록의 입력 칸(이용자 정보, 정액권·이용권의 시작일·기간·횟수 등)을 바꾸면, 사용자가 따로 말하지 않아도 이용자 수정(새 상품 추가·기존 상품 수정)에도 같은 모양·기능으로 반영한다. 정액권·이용권 칸은 `prodPeriodFields`/`bindPeriod`/`readPeriod`/`newProdFields` 공용 함수 하나로 그린다.
 
 ## 폴더 구조
@@ -24,8 +26,8 @@
 - `logo.png`: 학원 로고 원본(프로토타입에는 260px로 줄여 base64로 내장).
 - `.gitignore`: `.env` 등 비밀 키 파일을 커밋에서 제외.
 - `.env.example`: 필요한 설정 값의 이름만 적은 견본(실제 키 없음).
-- `supabase/migrations/001_schema.sql`(표·RLS), `002_public_functions.sql`(도우미 + 공개 함수 6개), `003_admin_functions.sql`(관리자 함수), `004_cleanup.sql`(3개월 정리 + pg_cron 예약), `005_product_target.sql`(상품 정보에 대상 구분 추가), `006_admin_reserve_product.sql`(관리자 예약도 상품 횟수 차감, 007이 대체), `007_admin_reserve_modes.sql`(관리자 예약 일반예약/슈퍼패스, 비밀번호 없음, 이름으로 이용자 찾기), `008_homonym_day_limit.sql`(동명이인 재원생 하루 1회 구분), `009_keep_30_days.sql`(보관 기간 30일, 자동 정리 상태 확인), `010_rename_count_pass.sql`(서버 문구 "이용권"→"횟수권"). **Supabase SQL Editor에 번호 순서대로 한 번씩 실행.** 새 마이그레이션에서 함수를 만들면 끝에 `revoke execute ... from public, anon, authenticated` 후 필요한 것만 grant(Supabase 기본 권한이 새 함수를 열 수 있음).
-- `supabase/tests/`: `00_local_shim.sql`(로컬 전용: anon/authenticated 역할, auth.uid(), extensions 스키마 흉내), `01_rules_test.sql`(규칙 시험 116개), `run_local.sh`(빈 DB에 마이그레이션+시험), `02_concurrency.sh`(동시 예약 시험). **Supabase에서는 실행하지 않음.** 로컬 실행: `PGHOST=<소켓폴더> PGPORT=<포트> bash supabase/tests/run_local.sh` → 마지막 줄 "모든 시험 통과".
+- `supabase/migrations/001_schema.sql`(표·RLS), `002_public_functions.sql`(도우미 + 공개 함수 6개), `003_admin_functions.sql`(관리자 함수), `004_cleanup.sql`(3개월 정리 + pg_cron 예약), `005_product_target.sql`(상품 정보에 대상 구분 추가), `006_admin_reserve_product.sql`(관리자 예약도 상품 횟수 차감, 007이 대체), `007_admin_reserve_modes.sql`(관리자 예약 일반예약/슈퍼패스, 비밀번호 없음, 이름으로 이용자 찾기), `008_homonym_day_limit.sql`(동명이인 재원생 하루 1회 구분), `009_keep_30_days.sql`(보관 기간 30일, 자동 정리 상태 확인), `010_rename_count_pass.sql`(서버 문구 "이용권"→"횟수권"), `011_door_codes.sql`(출입 비밀번호 저장·표시·관리자 변경). **Supabase SQL Editor에 번호 순서대로 한 번씩 실행.** 새 마이그레이션에서 함수를 만들면 끝에 `revoke execute ... from public, anon, authenticated` 후 필요한 것만 grant(Supabase 기본 권한이 새 함수를 열 수 있음).
+- `supabase/tests/`: `00_local_shim.sql`(로컬 전용: anon/authenticated 역할, auth.uid(), extensions 스키마 흉내), `01_rules_test.sql`(규칙 시험 126개), `run_local.sh`(빈 DB에 마이그레이션+시험), `02_concurrency.sh`(동시 예약 시험). **Supabase에서는 실행하지 않음.** 로컬 실행: `PGHOST=<소켓폴더> PGPORT=<포트> bash supabase/tests/run_local.sh` → 마지막 줄 "모든 시험 통과".
 
 ## 결정 사항 (2026-10-23, 사용자 확정)
 
@@ -133,6 +135,7 @@
   - v0.16.13: **제목 "드럼 연습실 예약" → "B1 음악 연습실 예약"**(화면 맨 위 제목과 브라우저 탭 제목, 사용자 요청). 폭 360px에서도 한 줄로 오른쪽 버튼과 겹치지 않음 확인(확인함). Supabase 작업 없음.
   - v0.17.0: **상품 이름 "이용권" → "횟수권"**(사용자 결정). 화면의 모든 "이용권"(배지·범례·이용자 현황 칸·이용자 정보·수정·등록·예약 창·내 예약·관리자 예약 설명 등)을 "횟수권"으로. 서버 안내 문구도 `010_rename_count_pass.sql`로 변경(예약·시간 변경·관리자 예약·이용자 수정·상품 확인 함수의 문구만, 동작·데이터 그대로, 종류 값은 계속 `count`). 다 썼을 때 문구는 "횟수권 N회를 모두 사용했습니다."로 다듬음. 참고: 표준국어대사전 표기는 "회수권(回數券)"으로 알려져 있으나(검색으로 직접 확인은 못 함), "회수(回收)"와 헷갈리고 "횟수권"이 업계에서 흔히 쓰여 사용자 결정대로 "횟수권". 로컬 시험 116개 통과, Chromium 화면 확인(확인함). **Supabase에 010 실행 필요.**
   - v0.17.1: **완료 화면의 체크 표시를 84px → 40px로 축소**(사용자 요청, 다른 정보를 넣을 자리 확보). 같은 `.ck`를 쓰는 모든 완료 화면에 적용: 예약 확정, 시간 변경 완료, 관리자 예약 완료, 이용자 등록·수정 완료. Chromium 다크 모드 확인(확인함). Supabase 작업 없음.
+  - v0.18.0: **출입 비밀번호(정문·연습실·화장실) 표시**(사용자 요청, 서버 `011_door_codes.sql`). 사용자 선택: **서버 저장 + 관리자가 직접 변경**(공개 저장소라 화면 코드에 넣으면 누구나 볼 수 있어서). ① 예약 확정 화면·시간 변경 완료 화면에 "출입 비밀번호" 상자(정문/연습실/화장실 비밀번호, 큰 글씨) ② 내 예약 조회 결과 맨 위(아직 끝나지 않은 확정 예약이 있을 때만, 사용자 선택) ③ 관리자 예약 완료 화면에는 없음(사용자 요청) ④ 관리자 > 설정 > **출입 비밀번호** 메뉴: 세 칸(각 1~20자) 수정 후 [저장] → 즉시 반영. 서버: `settings.door_codes`(처음 값 0000), 공개 함수 `my_codes(이름, 비밀번호)`는 이름+비밀번호가 맞는 앞으로의 확정 예약이 있을 때만 비밀번호를 주고, 아니면 실패 횟수를 셈(내 예약과 같은 5회 15분 잠금). 관리자 함수 `admin_door_codes`/`admin_set_door_codes`(작업 기록에 비밀번호 값은 남기지 않음). 로컬 시험 126개 통과, Chromium(흉내 낸 서버) 확인(확인함). **Supabase에 011 실행 필요.**
 - **다음에 할 일(2026-10-26 사용자 요청, 보류): 사용만료·블랙리스트.** 이용자 수정 화면 맨 아래 [사용만료]·[블랙리스트 추가] 버튼, 설정에 "사용만료 이용자"·"블랙리스트" 메뉴(정액권·이용권·일반 구분 없이 최근에 옮긴 사람이 맨 위). 사용만료 동작은 확정: 쓰던 정액권·이용권 종료, 외부 이용자는 예약 불가(미등록처럼), 재원생은 미등록 재원생처럼 하루 1회 가능, [다시 사용]으로 이용자 현황 복귀. 블랙리스트 동작(예약 차단 범위, 앞으로의 예약 처리)은 미결정.
 - **다음 작업(2026-10-26 사용자 결정): Supabase 적용 시작.** F4(아임웹 iframe 확인)·F5(코드 분리)보다 먼저 서버로 넘어간다(결정 사항 5의 순서 변경). 시작 전 사용자 준비: Supabase 가입·프로젝트 생성(지역 서울), 환경 설정 Allowed domains에 `*.supabase.co` 추가. 첫 작업은 계획을 먼저 보여 주고 확인받은 뒤 마이그레이션 SQL 작성 → 로컬 PostgreSQL 16으로 시험 → 사용자가 Supabase SQL Editor에서 실행.
 - **2026-10-27 Supabase 프로젝트 생성(사용자 완료).** 조직 `hyunmusicdrum`(Free), 프로젝트 `drum-room`, 지역 Northeast Asia (Seoul) `ap-northeast-2`, Project URL `https://ibcvbnpqmlqmdwxkepbl.supabase.co`(공개용 주소). 생성 때 Security: Data API 켬, **Automatically expose new tables 해제**(→ 함수 EXECUTE 권한은 마이그레이션에서 직접 GRANT), **Enable automatic RLS 켬**. GitHub 연동 안 함. 조직 생성 직후 "additional permissions" 경고는 재로그인으로 해결. 작업 환경 Allowed domains에 `*.supabase.co` 추가 완료, 컨테이너에서 접속 확인(키 없이 `/rest/v1/` → 401 응답, 즉 연결됨).
