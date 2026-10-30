@@ -503,4 +503,19 @@ reset role; set role authenticated;
 select test.ok((public.admin_set_fee(''))->>'fee' = '', '이용료 비우기');
 reset role;
 
+-- ===== 26. 이용료 표 (022) =====
+set role anon;
+select test.ok((public.price_info())->'ext_flat' = '[]'::jsonb, '처음엔 상품 가격 표가 비어 있음');
+select test.denied($$select public.admin_set_prices('{}')$$, '익명은 이용료 표를 바꿀 수 없음');
+reset role; set role authenticated;
+select test.ok((public.admin_set_prices('{"fee":"","ext_flat":[{"n":"1","price":""}]}'))->>'msg' like '일반회원 정액권 1번째 줄: 가격%', '가격이 빈 줄은 막음');
+select test.ok((public.admin_set_prices('{"fee":"","ext_count":[{"n":"0","price":"1000"}]}'))->>'msg' like '일반회원 횟수권 1번째 줄: 횟수를 1~999%', '횟수 0은 막음');
+select test.ok((public.admin_set_prices('{"fee":"","stu_flat":[{"n":"100","price":"1000"}]}'))->>'msg' like '재원생 정액권 1번째 줄: 횟수를 1~99%', '정액권 하루 100회는 막음');
+select test.ok((public.admin_set_prices('{"fee":"","ext_flat":[{},{},{},{},{},{},{},{},{},{},{}]}'))->>'msg' like '%10개까지%', '11개는 막음');
+select test.ok((public.admin_set_prices('{"fee":"8,000원","ext_flat":[{"n":"1","price":"100,000원"},{"n":"","price":""},{"n":"2회","price":"150000"}],"ext_count":[{"n":"10","price":"60000"}],"stu_flat":[]}'))->'ext_flat' = '[{"n":1,"price":"100000"},{"n":2,"price":"150000"}]'::jsonb, '저장(빈 줄은 버림, 쉼표·원·회 정리)');
+set role anon;
+select test.ok((public.price_info())->>'fee' = '8000' and (public.price_info())->'ext_count'->0->>'price' = '60000', '공개 조회에 1회 이용료·상품 가격이 보임');
+select test.ok((public.pay_info())->>'fee' = '8000' and (public.pay_info())->>'bank' = '신한', '1회 이용료는 계좌 상자에도 반영, 계좌는 그대로');
+reset role;
+
 select '모든 시험 통과' as 결과;

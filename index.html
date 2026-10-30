@@ -103,6 +103,13 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 .cardgroup{border:1.5px solid var(--line);border-radius:16px;padding:4px 10px;background:var(--line-soft,rgba(120,110,90,.07));margin:10px 0} /* 이용자 수정: 정보·상품·저장 상자를 큰 상자로 묶음(v0.21.11) */
 .card.blackbox,.card.farbox{margin-top:40px} /* 블랙리스트는 묶음 상자와 간격을 두어 떨어뜨림 */
 .btn2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 이용료 변경의 상품 한 줄: 하루/총 [N]회 · [가격]원 [✕] (v0.26.0) */
+.prow{display:flex;align-items:center;gap:6px;margin:8px 0;white-space:nowrap}
+.prow input{margin:0;padding:10px 8px}
+.prow .pn{width:58px;flex:none;text-align:center}
+.prow .pp{flex:1;min-width:0;text-align:right}
+.prow .pdel{flex:none;width:44px;min-height:44px;margin:0;padding:0}
+.pexp{font-size:13.5px;color:var(--sub);margin:0 0 6px;line-height:1.6}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -293,7 +300,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.25.3";
+const APP_VERSION="v0.26.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -934,6 +941,7 @@ async function reloadOnce(){
   if(adminTab==="proxy")await loadBoard();
   if(setPage==="door"){const c=await rpc("admin_door_codes");A.codes=c.ok?c.codes:null}
   if(setPage==="pay"||setPage==="fee"){const c=await rpc("pay_info");A.pay=c.ok?c:null}
+  if(setPage==="fee"){const c=await rpc("price_info");A.prices=c.ok?c:{ok:false,ext_flat:[],ext_count:[],stu_flat:[]};A.priceDraft=null;A.feeDraft=null}
   A.loaded=true;
   if(adminOn)renderAdmin();
 }
@@ -1302,23 +1310,50 @@ function payHtml(){
     '<div id="paMsg"></div><button class="btn" id="paGo">저장</button></div>'+
     '<div class="card"><div class="part" style="margin-top:0">화면에 보이는 모습</div><div id="paPrev">'+payBoxHtml(A.pay)+'</div></div>';
 }
-/* 설정 > 이용료 변경(v0.25.0, 서버 021): 일반회원 1회 이용료. 입금 계좌 상자(예약 확정 화면·내 예약)에 함께 나옵니다. */
+/* 설정 > 이용료 변경(v0.26.0, 서버 022): 1회 이용료 + 상품 가격 표(일반회원 정액권·횟수권, 재원생 정액권, 모두 30일 기준).
+   종류마다 줄을 더하거나(최대 10개) 지울 수 있고, [저장]을 눌러야 서버에 반영됩니다. 처음(저장한 상품이 없으면)엔 빈 줄 3개. */
+const PRICE_KINDS=[["ext_flat","정액권","하루",99],["ext_count","횟수권","총",999],["stu_flat","정액권","하루",99]];
+function priceDraft(){
+  if(!A.priceDraft){const P=A.prices||{};A.priceDraft={};PRICE_KINDS.forEach(([k])=>{const l=(P[k]||[]).map(x=>({n:String(x.n),price:Number(x.price).toLocaleString("ko-KR")}));A.priceDraft[k]=l.length?l:[{n:"",price:""},{n:"",price:""},{n:"",price:""}]})}
+  return A.priceDraft;
+}
+function readPriceDraft(){ // 화면에 입력된 값을 임시 표에 옮김(줄 추가·삭제 전에, 저장 전에)
+  const d=priceDraft();PRICE_KINDS.forEach(([k])=>{d[k]=[...document.querySelectorAll('[data-pk="'+k+'"] .prow')].map(r=>({n:r.querySelector(".pn").value,price:r.querySelector(".pp").value}))});
+  if($("#fe_fee"))A.feeDraft=$("#fe_fee").value;
+}
+function priceRowsHtml(k,word,max){
+  const l=priceDraft()[k];
+  return (l.length?l.map((x,i)=>'<div class="prow"><span>'+word+'</span><input type="text" class="pn" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="N" aria-label="'+word+' 횟수" value="'+esc(x.n)+'"><span>회 ·</span><input type="text" class="pp" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="가격" aria-label="가격" value="'+esc(x.price)+'"><span>원</span><button type="button" class="btn ghost small pdel" data-pdel="'+k+':'+i+'" aria-label="이 상품 삭제">✕</button></div>').join("")
+    :'<p class="hint">등록된 상품이 없습니다.</p>')+
+    (l.length<10?'<button type="button" class="btn ghost small" data-padd="'+k+'" style="width:100%;margin-top:4px">+ 상품 추가</button>':'<p class="hint">10개까지 만들 수 있습니다.</p>');
+}
 function feeHtml(){
-  if(!A.pay)return '<p class="hint">불러오는 중입니다…</p>';
-  return '<div class="card"><p class="hint" style="margin-top:0">일반회원(정액권·횟수권 없이 하는 예약)의 1회 이용료입니다. 예약 확정 화면과 내 예약의 입금 계좌 상자에 함께 보입니다. 비워 두면 이용료 줄이 보이지 않습니다.</p>'+
-    '<label for="fe_fee">1회 이용료 (원)</label><input type="text" id="fe_fee" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 5000" value="'+esc(A.pay.fee||"")+'">'+
-    '<div id="feMsg"></div><button class="btn" id="feGo">저장</button></div>'+
-    '<div class="card"><div class="part" style="margin-top:0">화면에 보이는 모습</div><div id="fePrev">'+payBoxHtml(A.pay)+'</div></div>';
+  if(!A.pay||!A.prices)return '<p class="hint">불러오는 중입니다…</p>';
+  const f0=(A.prices.ok&&A.prices.fee!=null?A.prices.fee:A.pay.fee)||"",fee=A.feeDraft!=null?A.feeDraft:(f0?Number(f0).toLocaleString("ko-KR"):"");
+  const box=(k,title,exp)=>{const [,,word,max]=PRICE_KINDS.find(x=>x[0]===k);return '<div class="card" data-pk="'+k+'"><div class="part" style="margin-top:0">'+title+' <small style="font-weight:400;color:var(--sub)">· 30일</small></div><p class="pexp">'+exp+'</p>'+priceRowsHtml(k,word,max)+'</div>'};
+  const FLAT='<b>30일 동안 하루 정해진 횟수만큼</b> 예약할 수 있는 상품입니다. 하루 횟수는 매일 다시 채워지며, 그날 쓰지 않은 횟수는 다음 날로 넘어가지 않습니다.<br>예: 하루 1회 · 100,000원 → 30일 동안 매일 1시간씩';
+  const CNT='<b>30일 안에 정해진 총 횟수만큼</b> 예약할 수 있는 상품입니다. 하루에 몇 번이든 쓸 수 있으며, 30일이 지나면 남은 횟수는 쓸 수 없습니다.<br>예: 총 10회 · 60,000원 → 30일 안에 아무 날이나 10시간';
+  return (A.prices.ok?'':'<div class="msg err">이용료 표를 불러오지 못했습니다. Supabase에 022를 실행했는지 확인하십시오.</div>')+
+    '<div class="card"><div class="part" style="margin-top:0">1회 이용료</div><p class="pexp">일반회원이 정액권·횟수권 없이 <b>한 번(1시간)</b> 예약할 때의 이용료입니다. 예약 확정 화면과 내 예약의 입금 계좌 상자에 함께 보입니다. 비워 두면 보이지 않습니다.</p>'+
+      '<div class="prow"><input type="text" id="fe_fee" class="pp" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 7000" value="'+esc(fee)+'"><span>원</span></div></div>'+
+    '<div class="cardgroup"><div class="part" style="margin:12px 4px 4px;border-bottom:0">일반회원 상품</div>'+box("ext_flat","일반회원 정액권",FLAT)+box("ext_count","일반회원 횟수권",CNT)+'</div>'+
+    box("stu_flat","재원생 정액권",FLAT.replace("100,000원","50,000원")+'<br>재원생은 횟수권이 없습니다.')+
+    '<div class="card"><p class="hint" style="margin-top:0">상품 추가·삭제와 가격 변경은 [저장]을 눌러야 반영됩니다. 횟수와 가격이 모두 빈 줄은 저장하지 않습니다.</p><div id="feMsg"></div><button class="btn" id="feGo">저장</button></div>'+
+    '<div class="card"><div class="part" style="margin-top:0">1회 이용료가 보이는 모습</div><div id="fePrev">'+payBoxHtml(A.pay)+'</div></div>';
 }
 function bindFee(){
   if(!$("#feGo"))return;bindPayCopy($("#fePrev"));
+  const redraw=()=>{const y=window.scrollY;renderAdmin();window.scrollTo(0,y)};
+  document.querySelectorAll("[data-padd]").forEach(b=>b.onclick=()=>{readPriceDraft();const l=priceDraft()[b.dataset.padd];if(l.length<10)l.push({n:"",price:""});redraw();
+    const rows=document.querySelectorAll('[data-pk="'+b.dataset.padd+'"] .prow');if(rows.length)rows[rows.length-1].querySelector(".pn").focus()});
+  document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{readPriceDraft();const [k,i]=b.dataset.pdel.split(":");priceDraft()[k].splice(+i,1);redraw()});
   $("#feGo").onclick=async()=>{
-    $("#feGo").disabled=true;const r=await rpc("admin_set_fee",{p_fee:$("#fe_fee").value});if($("#feGo"))$("#feGo").disabled=false;
+    readPriceDraft();const d=priceDraft(),p={fee:$("#fe_fee").value};PRICE_KINDS.forEach(([k])=>p[k]=d[k]);
+    $("#feGo").disabled=true;const r=await rpc("admin_set_prices",{p});if($("#feGo"))$("#feGo").disabled=false;
     if(r.auth){adminExpired();return}
     if(!r.ok){$("#feMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
-    A.pay=r;$("#fe_fee").value=r.fee||"";
-    $("#fePrev").innerHTML=payBoxHtml(r);bindPayCopy($("#fePrev"));
-    $("#feMsg").innerHTML='<div class="msg ok">'+(r.fee?'1회 이용료를 저장하였습니다.':'1회 이용료를 비웠습니다.')+'</div>';
+    A.prices=r;A.priceDraft=null;A.feeDraft=null;A.pay=Object.assign({},A.pay,{fee:r.fee});
+    redraw();$("#feMsg").innerHTML='<div class="msg ok">이용료를 저장하였습니다.</div>';
   };
 }
 function bindPay(){
