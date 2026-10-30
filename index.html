@@ -216,7 +216,9 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .tile .logo svg{width:92px;height:92px}
 .slot.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .slot.sel span{color:inherit}
-.sheet.done{position:relative;overflow:hidden;text-align:center}
+/* 완료 화면: 내용이 길면 창 안에서 스크롤, [확인]은 창 아래에 붙어 항상 보임(v0.25.1, 전에는 overflow:hidden이라 잘렸음) */
+.sheet.done{position:relative;overflow-x:hidden;overflow-y:auto;text-align:center}
+.sheet.done #ok{position:sticky;bottom:0;z-index:1;box-shadow:0 -10px 0 var(--surface),0 22px 0 var(--surface)}
 .ck{display:block;width:40px;height:40px;margin:0 auto}
 .sheet.done.stu{--done:var(--stu-btn);--done-line:var(--stu-btn);--done-text:var(--stu-text)}
 .sheet.done.ext{--done:var(--ext-btn);--done-line:var(--ext-line);--done-text:var(--ext-text)}
@@ -291,7 +293,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.25.0";
+const APP_VERSION="v0.25.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
