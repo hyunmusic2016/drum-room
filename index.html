@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.17";
+const APP_VERSION="v0.21.18";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -504,11 +504,13 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       '<div class="card" style="margin:12px 0 0"><b>'+esc(P)+'으로 예약하시려면</b><p style="margin:6px 0 0">먼저 관리자에게 '+esc(P)+' 연장을 신청하신 뒤 예약하십시오.</p>'+
         '<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1e8e4e;color:#fff" href="tel:'+PHONE.replace(/-/g,"")+'">관리자에게 전화 ('+PHONE+')</a></div>'+
       '<div class="card" style="margin:10px 0 0"><b>일반 예약으로 이용하시려면</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p>'+
-        '<div class="ro" style="margin-top:8px">'+esc(PAY_ACCOUNT)+'<br><b>이용료 '+esc(PAY_FEE)+'원</b></div>'+
+        '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(PAY_ACCOUNT)+'<br><b>이용료 '+esc(PAY_FEE)+'원</b></div>'+
+        '<button type="button" class="btn ghost small" id="ppCopy" style="flex:none;margin:0">계좌번호 복사</button></div>'+
         '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 일반 예약하기</button></div>';
     $("#sheet").prepend(pop);$("#sheet").scrollTop=0;
     const close=()=>{pop.remove();kids.forEach(k=>k.classList.remove("hidden"))};
     $("#ppBack").onclick=close;
+    $("#ppCopy").onclick=async()=>{/* 은행 앱에 붙여 넣기 쉽게 숫자 부분(계좌번호)만 복사 */const ok=await copyText((PAY_ACCOUNT.match(/\d[\d-]{5,}\d/)||[PAY_ACCOUNT])[0]);$("#ppCopy").textContent=ok?"복사했습니다":"복사 실패";setTimeout(()=>{if($("#ppCopy"))$("#ppCopy").textContent="계좌번호 복사"},2000)};
     $("#ppGo").onclick=()=>{warnOk=true;close();$("#rGo").click()};
   };
   $("#rGo").onclick=async()=>{
