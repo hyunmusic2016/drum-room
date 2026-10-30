@@ -309,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.28.0";
+const APP_VERSION="v0.28.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -898,8 +898,9 @@ async function openPriceSheet(){
   // 일반회원: 큰 상자 하나 안에 1회 이용료·정액권·횟수권 상자 3개(v0.28.0, 비어 있는 상자는 숨김)
   const inner=x=>x?'<div class="card" style="margin:10px 0">'+x.replace('<div style="margin-top:10px">','<div>')+'</div>':'';
   const ext=inner(P.fee?'<b>1회 이용료</b><div class="plrow" style="border-top:0;padding-bottom:0"><span>1회(1시간)</span><b>'+won(P.fee)+'</b></div>':'')+inner(sub("정액권","flat",FL,ef,"하루"))+inner(sub("횟수권","count",CN,ec,"총"));
-  if(ext)h+='<div class="cardgroup" style="margin-top:12px"><div class="part" style="margin:12px 4px 2px;color:var(--ext-text)">일반회원</div>'+ext+'</div>';
-  if(sf.length)h+=box("재원생","--stu-text",sub("정액권","flat",FL,sf,"하루"));
+  const group=(title,col,x)=>'<div class="cardgroup" style="margin-top:12px"><div class="part" style="margin:12px 4px 2px;color:var('+col+')">'+title+'</div>'+x+'</div>';
+  if(ext)h+=group("일반회원","--ext-text",ext);
+  if(sf.length)h+=group("재원생","--stu-text",inner(sub("정액권","flat",FL,sf,"하루"))); // 재원생도 같은 모양(v0.28.1)
   if(!ext&&!sf.length)h+='<p class="hint">이용료가 아직 등록되지 않았습니다. 관리자에게 문의하십시오.</p>';
   if(pi&&pi.ok&&pi.number)h+=box("입금 계좌","--ink",payBoxHtml(Object.assign({},pi,{fee:""})));
   h+='<p class="hint" style="text-align:center;margin-top:14px">정액권·횟수권 구매와 문의는 관리자에게 전화하십시오.</p>'+
