@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.22.1";
+const APP_VERSION="v0.22.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -303,8 +303,7 @@ const PHONE="010-7753-8730";
 function payBoxHtml(pi){ // 계좌 상자(계좌번호 복사 버튼 포함). pi: pay_info 응답
   if(!pi||!pi.ok)return '<div class="ro" style="margin-top:8px">'+esc(NET_MSG)+'</div>';
   if(!pi.number)return '<div class="ro" style="margin-top:8px">입금 계좌가 아직 등록되지 않았습니다. 관리자에게 문의하십시오.</div>';
-  return '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b><br>예금주 '+esc(pi.holder)+
-    (pi.fee?'<br><b>이용료 '+Number(pi.fee).toLocaleString("ko-KR")+'원</b>':'<br>이용료는 관리자에게 문의하십시오.')+'</div>'+
+  return '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b><br>예금주 '+esc(pi.holder)+'</div>'+ // 이용료 표시는 이용료 메뉴를 만들 때 다시 넣음(v0.22.2)
     '<button type="button" class="btn ghost small" data-copyacc="'+esc(pi.number)+'" style="flex:none;margin:0">계좌번호 복사</button></div>';
 }
 function bindPayCopy(root){ // 계좌번호(숫자와 -)만 복사, 2초 동안 "복사했습니다"
@@ -1285,18 +1284,17 @@ function payHtml(){
   return '<div class="card"><p class="hint" style="margin-top:0">상품(정액권·횟수권) 기간이 끝난 날짜를 예약할 때 나오는 안내 창 등 계좌가 보이는 곳에 쓰입니다. 저장하면 바로 바뀝니다.</p>'+
     '<div class="cols c2"><div>'+f("bank","은행명","예: 농협",' maxlength="20"')+'</div><div>'+f("holder","예금주","예: 현실용음악학원",' maxlength="20"')+'</div></div>'+
     f("number","계좌번호","예: 123-4567-8901-23",' maxlength="30" inputmode="numeric"')+
-    f("fee","일반 이용료 (원, 비워 둘 수 있음)","예: 5000",' maxlength="9" inputmode="numeric"')+
     '<div id="paMsg"></div><button class="btn" id="paGo">저장</button></div>'+
     '<div class="card"><div class="part" style="margin-top:0">화면에 보이는 모습</div><div id="paPrev">'+payBoxHtml(A.pay)+'</div></div>';
 }
 function bindPay(){
   if(!$("#paGo"))return;bindPayCopy($("#paPrev"));
   $("#paGo").onclick=async()=>{
-    const p={};["bank","holder","number","fee"].forEach(k=>p[k]=$("#pa_"+k).value);
+    const p={};["bank","holder","number"].forEach(k=>p[k]=$("#pa_"+k).value); // 이용료는 따로 만들 예정(v0.22.2에서 칸 삭제)
     $("#paGo").disabled=true;const r=await rpc("admin_set_pay",{p});if($("#paGo"))$("#paGo").disabled=false;
     if(r.auth){adminExpired();return}
     if(!r.ok){$("#paMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
-    A.pay=r;["bank","holder","number","fee"].forEach(k=>$("#pa_"+k).value=r[k]);
+    A.pay=r;["bank","holder","number"].forEach(k=>$("#pa_"+k).value=r[k]);
     $("#paPrev").innerHTML=payBoxHtml(r);bindPayCopy($("#paPrev"));
     $("#paMsg").innerHTML='<div class="msg ok">입금 계좌를 저장하였습니다.</div>';
   };
