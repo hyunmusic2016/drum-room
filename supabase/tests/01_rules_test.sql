@@ -476,4 +476,12 @@ set role anon;
 select test.ok((public.pay_info())->>'number' = '123-4567-8901-23' and (public.pay_info())->>'holder' = '현실용음악학원', '저장한 계좌가 공개 화면에 바로 보임');
 reset role;
 
+-- ===== 23. 상품 정보에 등록 이용자 표시 (019) =====
+set role anon;
+select test.ok((public.product_info('ext', '칠일시험', '4545'))->>'registered' = 'true', '등록 외부 이용자(이름+비밀번호 맞음)는 registered');
+select test.ok((public.product_info('ext', '휴면외부', '5656'))->>'registered' = 'true' and (public.product_info('ext', '휴면외부', '5656'))->'product' = 'null'::jsonb, '상품 없는 등록 외부 이용자도 registered');
+select test.ok((public.product_info('ext', '휴면외부', '0000'))->>'registered' is null, '비밀번호가 틀리면 registered 없음');
+select test.ok((public.product_info('ext', '없는사람', '1234'))->>'registered' is null, '미등록 이름은 registered 없음');
+reset role;
+
 select '모든 시험 통과' as 결과;
