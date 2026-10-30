@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.23.0";
+const APP_VERSION="v0.23.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1050,7 +1050,7 @@ function statusHtml(){
     '<div class="hrow"><input type="search" class="hsearch" id="qUser" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(stQ)+'">'+
     '<button type="button" class="btn ghost small" id="qUserAll">전부 펼치기</button></div>'+
     '<p class="hint hidden" id="qUserNone">찾는 이름의 이용자가 없습니다.</p>'+
-    sec("flat","정액권")+sec("count","횟수권")+sec("none","일반");
+    sec("flat","정액권")+sec("count","횟수권")+sec("none","일반회원");
 }
 function applyStatusQ(){
   const q=normName(stQ);let any=false;
