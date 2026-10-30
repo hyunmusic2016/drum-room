@@ -62,6 +62,9 @@ label{display:block;font-weight:700;font-size:14px;margin:16px 0 8px}
 input[type=text],input[type=password],input[type=email],input[type=search],input[type=tel],input[type=number],input[type=date]{width:100%;font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
 input:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 .hint{font-size:13px;color:var(--sub);margin:4px 0 0}
+.endrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.endrow .btn{flex:none}
+.endtxt{font-size:16px;font-weight:700;color:var(--ink);margin:0}
 .hint.warn{color:var(--brass);font-weight:500}
 .btn{min-height:50px;width:100%;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;cursor:pointer;margin-top:14px}
 .btn.ext{background:var(--ext-btn);color:var(--ext-ink)}
@@ -277,7 +280,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.20.0";
+const APP_VERSION="v0.20.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -876,8 +879,8 @@ function totRead(p){const r=readNum(p+"Tot",999,"총 이용 횟수");return r.ok
 /* 정액권·횟수권 입력 칸은 이 함수들 하나로 그립니다. 이용자 등록, 이용자 수정(새로 추가·기존 상품 수정)이 모두 같은 칸을 쓰므로
    여기만 고치면 세 곳이 함께 바뀝니다(사용자 요청: 등록 폼이 바뀌면 수정 폼도 똑같이).
    prodPeriodFields: 시작일 | 기간 (일) | 하루 또는 총 이용 횟수 + "종료일: … (N일)" 표시 */
-function prodPeriodFields(p,start,days,qty){
-  return '<div class="cols c3"><div><label for="'+p+'Start">시작일</label><input type="date" id="'+p+'Start" value="'+start+'"></div><div><label for="'+p+'Days">기간 (일)</label><input type="text" id="'+p+'Days" inputmode="numeric" maxlength="3" autocomplete="off" value="'+days+'"></div><div id="'+p+'Qty">'+(qty||"")+'</div></div><p class="hint" id="'+p+'End"></p>';
+function prodPeriodFields(p,start,days,qty,side){ // side: 종료일 줄 오른쪽 끝에 둘 것(예: [30일 연장])
+  return '<div class="cols c3"><div><label for="'+p+'Start">시작일</label><input type="date" id="'+p+'Start" value="'+start+'"></div><div><label for="'+p+'Days">기간 (일)</label><input type="text" id="'+p+'Days" inputmode="numeric" maxlength="3" autocomplete="off" value="'+days+'"></div><div id="'+p+'Qty">'+(qty||"")+'</div></div><div class="endrow"><p class="endtxt" id="'+p+'End"></p>'+(side||"")+'</div>';
 }
 function bindPeriod(p){const updEnd=()=>{const s=$("#"+p+"Start").value,d=daysVal(p+"Days");$("#"+p+"End").textContent=s&&d?periodText(s,d):""};$("#"+p+"Start").oninput=updEnd;$("#"+p+"Days").oninput=updEnd;updEnd();return updEnd}
 function readPeriod(p){const start=$("#"+p+"Start").value,days=daysVal(p+"Days");return start&&days?{start,days}:{err:"시작일과 기간(일)을 확인하십시오. 기간은 1 이상의 숫자로 입력하십시오."}}
@@ -1056,8 +1059,7 @@ function userEditHtml(){
   let prod;
   if(c){
     prod='<div style="margin-bottom:4px"><span class="badge '+c.kind+'" style="margin-left:0">'+PROD[c.kind]+'</span>'+(c.start>seoulDate()?' <span class="hint">시작 예정</span>':'')+'</div>'+
-      prodPeriodFields("e",c.start,spanDays(c.start,c.end),qtyCtl("e",c.kind,c.kind==="count"?c.total:c.limit))+
-      (c.kind==="flat"?'<button class="btn ghost small" id="eExt">30일 연장</button>':'')+
+      prodPeriodFields("e",c.start,spanDays(c.start,c.end),qtyCtl("e",c.kind,c.kind==="count"?c.total:c.limit),c.kind==="flat"?'<button class="btn ghost small" id="eExt">30일 연장</button>':'')+
       (c.kind==="count"?'<p class="hint">지금까지 '+c.used+'회 사용했습니다(취소된 예약 제외).</p>':'')+'<p class="hint" id="eExtMsg"></p>';
   }else{
     prod=(q?'<p class="hint" style="margin:0 0 8px">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'')+newProdFields("ue",u.type);
