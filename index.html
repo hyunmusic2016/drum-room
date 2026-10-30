@@ -100,6 +100,8 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .badge.black{color:#c9a8f0;border-color:#c9a8f0}}
 :root[data-theme="dark"] .badge.black{color:#c9a8f0;border-color:#c9a8f0}
 .btn.edit{background:#f5c518;color:#3d2e00}
+.cardgroup{border:1.5px solid var(--line);border-radius:16px;padding:4px 10px;background:var(--line-soft,rgba(120,110,90,.07));margin:10px 0} /* 이용자 수정: 정보·상품·저장 상자를 큰 상자로 묶음(v0.21.11) */
+.card.blackbox{margin-top:40px} /* 블랙리스트는 묶음 상자와 간격을 두어 떨어뜨림 */
 .btn2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
@@ -288,7 +290,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.10";
+const APP_VERSION="v0.21.11";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1114,15 +1116,15 @@ function userEditHtml(){
     prod=(q?'<p class="hint" style="margin:0 0 8px">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'')+newProdFields("ue",u.type);
   }
   // 상자 나눔(v0.21.10): ① 이용자 정보(메모까지) ② 정액권·횟수권(종료 버튼 포함) ③ [블랙리스트 사유] ④ 저장 | 수정 취소 ⑤ 블랙리스트 등록
-  return '<div class="card">'+typeChecks("ue",u.type)+
+  return '<div class="cardgroup"><div class="card">'+typeChecks("ue",u.type)+
     (u.status==="blacklisted"?'<p class="hint" style="margin-top:8px">블랙리스트 이용자입니다. 복귀하기 전에는 재원생으로 바꿀 수 없습니다.</p>':'')+
     userFields("ue",u)+'</div>'+
     '<div class="card"><div class="part" style="margin-top:0">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음 · 새로 추가할 수 있습니다')+'</small></div>'+prod+
     (c?'<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:4px"><button class="btn danger" id="eStop">'+PROD[c.kind]+' 종료</button><p class="hint">종료하면 오늘부터 이 '+PROD[c.kind]+'으로 예약할 수 없고, 이용자 현황에서 일반으로 옮겨집니다. 이미 확정된 예약은 그대로 유지됩니다.</p></div>':'')+'</div>'+
     (u.status==="blacklisted"?'<div class="card"><div class="part" style="margin-top:0">블랙리스트 사유<small>등록 '+esc(dOnly(u.black_at||u.status_at))+'</small></div><textarea id="eBReason" maxlength="200" rows="3" aria-label="블랙리스트 사유" placeholder="사유 없음 (200자까지)">'+esc(u.black_reason||"")+'</textarea></div>':'')+
-    '<div class="card"><div id="ueMsg"></div><div class="btn2"><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button></div></div>'+
+    '<div class="card"><div id="ueMsg"></div><div class="btn2"><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button></div></div></div>'+
     // 블랙리스트 등록은 따로 된 상자(v0.21.1)
-    (u.type==="ext"&&u.status!=="blacklisted"?'<div class="card"><div class="part" style="margin-top:0">블랙리스트</div>'+(u.black_count>0?'<p class="hint" style="margin:0 0 8px">'+blackHist(u)+'</p>':'')+'<button class="btn violet" id="eBlack">블랙리스트 등록</button><p class="hint">등록하면 이 이용자는 예약할 수 없고(관리자 슈퍼패스만 가능), 앞으로의 확정 예약은 관리자 취소됩니다. 정액권·횟수권은 그대로 남습니다. 설정 &gt; 블랙리스트에서 복귀할 수 있습니다.</p></div>':'');
+    (u.type==="ext"&&u.status!=="blacklisted"?'<div class="card blackbox"><div class="part" style="margin-top:0">블랙리스트</div>'+(u.black_count>0?'<p class="hint" style="margin:0 0 8px">'+blackHist(u)+'</p>':'')+'<button class="btn violet" id="eBlack">블랙리스트 등록</button><p class="hint">등록하면 이 이용자는 예약할 수 없고(관리자 슈퍼패스만 가능), 앞으로의 확정 예약은 관리자 취소됩니다. 정액권·횟수권은 그대로 남습니다. 설정 &gt; 블랙리스트에서 복귀할 수 있습니다.</p></div>':'');
 }
 function bindUserEdit(){
   const u=A.detail.user,c=u.current;
