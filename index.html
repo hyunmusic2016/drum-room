@@ -114,6 +114,9 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 .onehr{border:2px solid var(--accent-strong);background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 12px;margin:10px 0;text-align:center}
 .onehr b{display:block;font-size:20px;font-weight:900}
 .onehr span{display:block;font-size:13.5px;margin-top:4px}
+.plrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.plrow:first-of-type{border-top:0}
+.plrow b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hr1{display:inline-block;border-radius:6px;padding:0 6px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12.5px;margin-left:4px;vertical-align:1px}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
@@ -267,6 +270,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
     <div id="bookMsg" role="status"></div>
     <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">일반회원 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">횟수권</i></span></div>
     <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
+    <button class="btn ghost" id="priceBtn" style="margin-top:18px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>이용료 보기</button>
     <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (정액권 이용자 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
   </section>
 
@@ -305,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.26.1";
+const APP_VERSION="v0.27.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -864,6 +868,32 @@ $("#mFind").onclick=async()=>{
     $("#mFind").click();refreshBook();
   });
 };
+/* 홈 화면 [이용료 보기](v0.27.0): 1회 이용료·정액권·횟수권 가격 표(설정 > 이용료 변경)와 입금 계좌를 창으로 보여 줍니다.
+   열 때마다 서버(price_info·pay_info)에서 새로 받아 오므로 관리자가 바꾸면 바로 반영됩니다. 비어 있는 종류는 숨깁니다. */
+async function openPriceSheet(){
+  $("#sheet").className="sheet";
+  $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">이용료 안내</h2><button class="btn ghost small" id="cx">닫기</button></div><div id="plBody"><p class="hint">불러오는 중입니다…</p></div>';
+  $("#bg").classList.add("open");$("#cx").onclick=closeSheet;
+  const [P,pi]=await Promise.all([rpc("price_info"),rpc("pay_info")]);
+  if(!$("#plBody"))return;
+  if(!P||!P.ok){$("#plBody").innerHTML='<div class="msg err">'+esc(NET_MSG)+'</div>';return}
+  const won=v=>Number(v).toLocaleString("ko-KR")+'원';
+  const rows=(l,word)=>l.map(x=>'<div class="plrow"><span>'+word+' <b style="font-size:inherit">'+x.n+'회</b> · 30일</span><b>'+won(x.price)+'</b></div>').join("");
+  const box=(title,col,inner)=>'<div class="card" style="margin:12px 0 0"><div class="part" style="margin-top:0;color:var('+col+')">'+title+'</div>'+inner+'</div>';
+  const sub=(name,cls,exp,l,word)=>l.length?'<div style="margin-top:10px"><span class="badge '+cls+'" style="margin-left:0">'+name+'</span><p class="pexp" style="margin:6px 0 0">'+exp+'</p>'+rows(l,word)+'</div>':'';
+  const FL='30일 동안 <b>하루 정해진 횟수</b>까지 예약할 수 있습니다(매일 다시 채워짐).',CN='30일 안에 <b>총 정해진 횟수</b>만큼 예약할 수 있습니다(하루 제한 없음).';
+  const ef=P.ext_flat||[],ec=P.ext_count||[],sf=P.stu_flat||[];
+  let h='<div class="onehr"><b>1회 = 1시간 예약</b><span>이용료와 정액권·횟수권의 횟수는 모두 1시간 예약 1번을 1회로 셉니다.</span></div>';
+  const ext=(P.fee?'<div class="plrow"><span>1회(1시간) 이용료</span><b>'+won(P.fee)+'</b></div>':'')+sub("정액권","flat",FL,ef,"하루")+sub("횟수권","count",CN,ec,"총");
+  if(ext)h+=box("일반회원","--ext-text",ext);
+  if(sf.length)h+=box("재원생","--stu-text",sub("정액권","flat",FL,sf,"하루"));
+  if(!ext&&!sf.length)h+='<p class="hint">이용료가 아직 등록되지 않았습니다. 관리자에게 문의하십시오.</p>';
+  if(pi&&pi.ok&&pi.number)h+=box("입금 계좌","--ink",payBoxHtml(Object.assign({},pi,{fee:""})));
+  h+='<p class="hint" style="text-align:center;margin-top:14px">정액권·횟수권 구매와 문의는 관리자에게 전화하십시오.</p>'+
+    '<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1e8e4e;color:#fff" href="tel:'+PHONE.replace(/-/g,"")+'">관리자에게 전화 ('+PHONE+')</a>';
+  $("#plBody").innerHTML=h;bindPayCopy($("#plBody"));
+}
+$("#priceBtn").onclick=openPriceSheet;
 async function openMoveSheet(id){
   const r=mine&&mine.r.list.find(x=>x.id===id);
   if(!r)return;
