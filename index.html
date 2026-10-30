@@ -110,6 +110,11 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 .prow .pp{flex:1;min-width:0;text-align:right}
 .prow .pdel{flex:none;width:44px;min-height:44px;margin:0;padding:0}
 .pexp{font-size:13.5px;color:var(--sub);margin:0 0 6px;line-height:1.6}
+/* "1회 = 1시간" 강조(v0.26.1) */
+.onehr{border:2px solid var(--accent-strong);background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 12px;margin:10px 0;text-align:center}
+.onehr b{display:block;font-size:20px;font-weight:900}
+.onehr span{display:block;font-size:13.5px;margin-top:4px}
+.hr1{display:inline-block;border-radius:6px;padding:0 6px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12.5px;margin-left:4px;vertical-align:1px}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -300,7 +305,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.26.0";
+const APP_VERSION="v0.26.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -315,7 +320,7 @@ function payBoxHtml(pi){ // 계좌 상자(계좌번호 복사 버튼 포함). pi
   return '<div class="ro" style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:10px"><div style="flex:1 1 auto">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b>'+feeLine(pi)+'<div style="font-size:13px;color:var(--sub);margin-top:2px">예금주: '+esc(pi.holder)+'</div></div>'+ // 1회 이용료는 설정 > 이용료 변경(v0.25.0, 비어 있으면 줄 없음), 예금주는 참고용이라 작은 회색 글씨로 맨 아래(v0.25.2)
     '<button type="button" class="btn ghost small" data-copyacc="'+esc(pi.number)+'" style="flex:none;margin:0">계좌번호 복사</button></div>';
 }
-function feeLine(pi){return pi&&pi.fee?'<br>1회 이용료 <b>'+Number(pi.fee).toLocaleString("ko-KR")+'원</b>':""}
+function feeLine(pi){return pi&&pi.fee?'<br>1회(1시간) 이용료 <b>'+Number(pi.fee).toLocaleString("ko-KR")+'원</b>':""}
 // "이용료 입금 계좌" 상자(예약 확정 화면, 내 예약에서 같이 씀, v0.25.0). 내용은 loadPayBox로 채움.
 function payCardHtml(id){return '<div class="card" style="text-align:left;margin:12px 0 0"><b>이용료 입금 계좌</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p><div id="'+id+'"><div class="ro" style="margin-top:8px">불러오는 중입니다…</div></div></div>'}
 function loadPayBox(sel,still){rpc("pay_info").then(pi=>{const el=$(sel);if(el&&(!still||still())){el.innerHTML=payBoxHtml(pi);bindPayCopy(el)}})} // 열 때마다 새로 받아 옴
@@ -1330,16 +1335,17 @@ function priceRowsHtml(k,word,max){
 function feeHtml(){
   if(!A.pay||!A.prices)return '<p class="hint">불러오는 중입니다…</p>';
   const f0=(A.prices.ok&&A.prices.fee!=null?A.prices.fee:A.pay.fee)||"",fee=A.feeDraft!=null?A.feeDraft:(f0?Number(f0).toLocaleString("ko-KR"):"");
-  const box=(k,title,exp)=>{const [,,word,max]=PRICE_KINDS.find(x=>x[0]===k);return '<div class="card" data-pk="'+k+'"><div class="part" style="margin-top:0">'+title+' <small style="font-weight:400;color:var(--sub)">· 30일</small></div><p class="pexp">'+exp+'</p>'+priceRowsHtml(k,word,max)+'</div>'};
+  const box=(k,title,exp)=>{const [,,word,max]=PRICE_KINDS.find(x=>x[0]===k);return '<div class="card" data-pk="'+k+'"><div class="part" style="margin-top:0">'+title+' <small style="font-weight:400;color:var(--sub)">· 30일</small><span class="hr1">1회 = 1시간</span></div><p class="pexp">'+exp+'</p>'+priceRowsHtml(k,word,max)+'</div>'};
   const FLAT='<b>30일 동안 하루 정해진 횟수만큼</b> 예약할 수 있는 상품입니다. 하루 횟수는 매일 다시 채워지며, 그날 쓰지 않은 횟수는 다음 날로 넘어가지 않습니다.<br>예: 하루 1회 · 100,000원 → 30일 동안 매일 1시간씩';
   const CNT='<b>30일 안에 정해진 총 횟수만큼</b> 예약할 수 있는 상품입니다. 하루에 몇 번이든 쓸 수 있으며, 30일이 지나면 남은 횟수는 쓸 수 없습니다.<br>예: 총 10회 · 60,000원 → 30일 안에 아무 날이나 10시간';
   return (A.prices.ok?'':'<div class="msg err">이용료 표를 불러오지 못했습니다. Supabase에 022를 실행했는지 확인하십시오.</div>')+
-    '<div class="card"><div class="part" style="margin-top:0">1회 이용료</div><p class="pexp">일반회원이 정액권·횟수권 없이 <b>한 번(1시간)</b> 예약할 때의 이용료입니다. 예약 확정 화면과 내 예약의 입금 계좌 상자에 함께 보입니다. 비워 두면 보이지 않습니다.</p>'+
+    '<div class="onehr"><b>1회 = 1시간 예약</b><span>1회 이용료, 정액권의 하루 횟수, 횟수권의 총 횟수는 모두 <b style="display:inline;font-size:inherit">1시간 예약 1번</b>을 1회로 셉니다.</span></div>'+
+    '<div class="card"><div class="part" style="margin-top:0">1회 이용료<span class="hr1">1시간</span></div><p class="pexp">일반회원이 정액권·횟수권 없이 <b>한 번(1시간)</b> 예약할 때의 이용료입니다. 예약 확정 화면과 내 예약의 입금 계좌 상자에 함께 보입니다. 비워 두면 보이지 않습니다.</p>'+
       '<div class="prow"><input type="text" id="fe_fee" class="pp" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 7000" value="'+esc(fee)+'"><span>원</span></div></div>'+
     '<div class="cardgroup"><div class="part" style="margin:12px 4px 4px;border-bottom:0">일반회원 상품</div>'+box("ext_flat","일반회원 정액권",FLAT)+box("ext_count","일반회원 횟수권",CNT)+'</div>'+
     box("stu_flat","재원생 정액권",FLAT.replace("100,000원","50,000원")+'<br>재원생은 횟수권이 없습니다.')+
     '<div class="card"><p class="hint" style="margin-top:0">상품 추가·삭제와 가격 변경은 [저장]을 눌러야 반영됩니다. 횟수와 가격이 모두 빈 줄은 저장하지 않습니다.</p><div id="feMsg"></div><button class="btn" id="feGo">저장</button></div>'+
-    '<div class="card"><div class="part" style="margin-top:0">1회 이용료가 보이는 모습</div><div id="fePrev">'+payBoxHtml(A.pay)+'</div></div>';
+    '<div class="card"><div class="part" style="margin-top:0">1회 이용료가 손님 화면에 보이는 모습</div><div id="fePrev">'+payBoxHtml(A.pay)+'</div></div>';
 }
 function bindFee(){
   if(!$("#feGo"))return;bindPayCopy($("#fePrev"));
