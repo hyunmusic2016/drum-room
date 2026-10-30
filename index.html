@@ -117,6 +117,11 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 .plrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:1px solid var(--line);padding:10px 0}
 .plrow:first-of-type{border-top:0}
 .plrow b{font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.plrow.pick{width:100%;background:none;border:0;border-top:1px solid var(--line);font:inherit;color:var(--ink);text-align:left;cursor:pointer;border-radius:8px;padding:10px 6px}
+.plrow.pick:first-of-type{border-top:0}
+.plrow.pick:hover:not(:disabled),.plrow.pick:focus-visible{background:var(--line)}
+.plrow.pick:disabled{opacity:.45;cursor:not-allowed}
+.pickgo{color:var(--accent-text);font-weight:900;margin-left:4px}
 .hr1{display:inline-block;border-radius:6px;padding:0 6px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:12.5px;margin-left:4px;vertical-align:1px}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
@@ -309,7 +314,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.31.0";
+const APP_VERSION="v0.32.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1006,30 +1011,42 @@ async function reloadOnce(){
 
 /* 이용자 입력 칸 */
 /* 이용자 등록·수정의 정액권·횟수권 칸 제목 옆 [가격표] 버튼(v0.31.0): 설정 > 이용료 변경에 저장한 횟수·가격을 창으로 보여 줌.
-   지금 체크된 구분(재원생/일반회원)에 맞는 표를 먼저 보여 주고, 창 안에서 다른 구분으로 바꿔 볼 수 있음. 보기 전용. */
+   v0.32.0: 지금 체크된 구분(일반회원/재원생)의 가격표만 보여 주고(헷갈리지 않게), 상품을 누르면 종류·횟수 칸에 자동으로 넣음.
+   p = 폼 앞글자("u" 이용자 등록, "ue" 이용자 수정). 수정 화면에서 이미 상품을 쓰는 중이면 같은 종류만 횟수를 바꿀 수 있음(기간은 그대로). */
 function priceRefBtn(p){return '<button type="button" class="btn ghost small" data-priceref="'+p+'" style="margin-left:auto;min-height:34px;padding:0 10px;font-size:13px;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>가격표</button>'}
-async function openPriceRef(type){
+function curProdKind(){return $("#eLim")?"flat":$("#eTot")?"count":null} // 수정 화면에서 사용 중인 상품 종류(없으면 null)
+function pickPrice(p,kind,n){ // 고른 상품을 폼에 넣기
+  let id;
+  if($("#"+p+"Kind")){ // 새 상품 칸(이용자 등록, 상품 없는 이용자 수정)
+    const ko=$("#"+p+"Kind");ko.value=kind;ko.dispatchEvent(new Event("change"));
+    $("#"+p+"Days").value=PERIOD_DAYS;$("#"+p+"Days").dispatchEvent(new Event("input"));
+    id=p+(kind==="count"?"Tot":"Lim");
+  }else id="e"+(kind==="count"?"Tot":"Lim"); // 사용 중인 상품 수정: 횟수만
+  const f=$("#"+id);if(!f)return;
+  f.value=n;f.dispatchEvent(new Event("input"));
+  f.scrollIntoView({block:"center"});f.style.transition="box-shadow .3s";f.style.boxShadow="0 0 0 4px var(--accent)";setTimeout(()=>{f.style.boxShadow=""},1600);
+}
+async function openPriceRef(p,type){
   $("#sheet").className="sheet";
   $("#sheet").innerHTML='<div class="row"><h2 style="margin:0">가격표</h2><button class="btn ghost small" id="cx">닫기</button></div><div id="prBody"><p class="hint">불러오는 중입니다…</p></div>';
   $("#bg").classList.add("open");$("#cx").onclick=closeSheet;
   const P=await rpc("price_info");if(!$("#prBody"))return;
   if(!P||!P.ok){$("#prBody").innerHTML='<div class="msg err">'+esc(P&&P.msg||NET_MSG)+'</div>';return}
-  const won=v=>Number(v).toLocaleString("ko-KR")+'원';
-  const rows=(l,word)=>l.length?l.map(x=>'<div class="plrow"><span>'+word+' <b style="font-size:inherit">'+x.n+'회</b> · 30일</span><b>'+won(x.price)+'</b></div>').join(""):'<p class="hint" style="margin:4px 0">등록된 상품이 없습니다.</p>';
+  const won=v=>Number(v).toLocaleString("ko-KR")+'원',cur=p==="ue"?curProdKind():null;
+  const rows=(l,word,kind)=>l.length?l.map(x=>{const ok=!cur||cur===kind;
+      return '<button type="button" class="plrow pick"'+(ok?' data-pick="'+kind+':'+x.n+'"':' disabled')+'><span>'+word+' <b style="font-size:inherit">'+x.n+'회</b> · 30일</span><b>'+won(x.price)+(ok?' <span class="pickgo">›</span>':'')+'</b></button>'}).join("")
+    :'<p class="hint" style="margin:4px 0">등록된 상품이 없습니다.</p>';
   const card=(t,x)=>'<div class="card" style="margin:10px 0"><div style="font-weight:700;margin-bottom:2px">'+t+'</div>'+x+'</div>';
-  const draw=t=>{
-    const g=t==="ext"
-      ?card("1회 이용료",P.fee?'<div class="plrow" style="border-top:0"><span>1회(1시간)</span><b>'+won(P.fee)+'</b></div>':'<p class="hint" style="margin:4px 0">등록되지 않았습니다.</p>')+card('<span class="badge flat" style="margin-left:0">정액권</span>',rows(P.ext_flat||[],"하루"))+card('<span class="badge count" style="margin-left:0">횟수권</span>',rows(P.ext_count||[],"총"))
-      :card('<span class="badge flat" style="margin-left:0">정액권</span>',rows(P.stu_flat||[],"하루"));
-    $("#prBody").innerHTML=(priceDate(P.updated_at)?'<p style="font-size:13px;color:var(--sub);margin:8px 0 0">🗓 <b style="color:var(--ink)">'+priceDate(P.updated_at)+'</b> 기준 최신 이용료입니다.</p>':'')+
-      '<div class="tabs" style="margin-top:10px"><button class="tab" data-prt="ext" aria-selected="'+(t==="ext")+'">일반회원</button><button class="tab" data-prt="stu" aria-selected="'+(t==="stu")+'">재원생</button></div>'+
-      '<div class="cardgroup" style="margin-top:8px"><div class="part" style="margin:12px 4px 2px;color:var('+(t==="ext"?'--ext-text':'--stu-text')+')">'+(t==="ext"?'일반회원':'재원생')+'</div>'+g+'</div>'+
-      '<p class="hint" style="text-align:center">가격은 설정 &gt; 이용료 변경에서 바꿀 수 있습니다.</p>';
-    document.querySelectorAll("[data-prt]").forEach(b=>b.onclick=()=>draw(b.dataset.prt));
-  };
-  draw(type);
+  const g=type==="ext"
+    ?card("1회 이용료",P.fee?'<div class="plrow" style="border-top:0"><span>1회(1시간)</span><b>'+won(P.fee)+'</b></div>':'<p class="hint" style="margin:4px 0">등록되지 않았습니다.</p>')+card('<span class="badge flat" style="margin-left:0">정액권</span>',rows(P.ext_flat||[],"하루","flat"))+card('<span class="badge count" style="margin-left:0">횟수권</span>',rows(P.ext_count||[],"총","count"))
+    :card('<span class="badge flat" style="margin-left:0">정액권</span>',rows(P.stu_flat||[],"하루","flat"));
+  $("#prBody").innerHTML=(priceDate(P.updated_at)?'<p style="font-size:13px;color:var(--sub);margin:8px 0 0">🗓 <b style="color:var(--ink)">'+priceDate(P.updated_at)+'</b> 기준 최신 이용료입니다.</p>':'')+
+    '<p class="hint" style="margin:6px 0 0">'+(cur?'사용 중인 '+PROD[cur]+'의 횟수만 바꿀 수 있습니다. 누르면 횟수 칸에 들어갑니다(기간은 그대로).':'상품을 누르면 종류·횟수 칸에 자동으로 들어갑니다(기간 30일).')+'</p>'+
+    '<div class="cardgroup" style="margin-top:8px"><div class="part" style="margin:12px 4px 2px;color:var('+(type==="ext"?'--ext-text':'--stu-text')+')">'+(type==="ext"?'일반회원':'재원생')+'</div>'+g+'</div>'+
+    '<p class="hint" style="text-align:center">가격은 설정 &gt; 이용료 변경에서 바꿀 수 있습니다. 저장은 [이용자 등록]/[저장]을 눌러야 됩니다.</p>';
+  document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [k,n]=b.dataset.pick.split(":");closeSheet();pickPrice(p,k,n)});
 }
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-priceref]");if(!b)return;e.preventDefault();const t1=$("#"+b.dataset.priceref+"T1");openPriceRef(t1&&t1.checked?"stu":"ext")});
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-priceref]");if(!b)return;e.preventDefault();const t1=$("#"+b.dataset.priceref+"T1");openPriceRef(b.dataset.priceref,t1&&t1.checked?"stu":"ext")});
 function typeChecks(p,type){ // 재원생/일반회원 체크박스(둘 중 하나만)
   return '<div style="display:flex;gap:18px;margin-top:12px"><label class="check" style="margin:0"><input type="checkbox" id="'+p+'T1"'+(type==="stu"?' checked':'')+'><span style="font-size:15px;font-weight:700;color:var(--stu-text)">재원생</span></label><label class="check" style="margin:0"><input type="checkbox" id="'+p+'T2"'+(type==="ext"?' checked':'')+'><span style="font-size:15px;font-weight:700;color:var(--ext-text)">일반회원</span></label></div>';
 }
