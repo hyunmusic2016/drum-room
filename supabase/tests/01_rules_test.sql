@@ -406,4 +406,25 @@ set role anon;
 select test.ok((public.reserve('2026-12-23', 13, '만료외부', '1212', true, 'ext'))->>'ok' = 'true', '복귀 뒤 다시 예약 가능(남은 횟수권 사용)');
 reset role;
 
+-- ===== 19. 블랙리스트 사유·이력 (016) =====
+set role authenticated;
+select test.ok((public.admin_user(:x_uid))->'user'->>'black_count' = '1', '18번에서 한 번 블랙리스트였던 이력(1회)');
+select test.ok((public.admin_user(:x_uid))->'user'->>'black_restored_at' is not null, '복귀 날짜 기록');
+select test.ok((public.admin_set_status(:x_uid, 'blacklisted', '  노쇼 3회  '))->'user'->>'black_reason' = '노쇼 3회', '사유와 함께 블랙리스트 등록(앞뒤 공백 정리)');
+select test.ok((public.admin_user(:x_uid))->'user'->>'black_count' = '2', '이력 2회');
+select test.ok((public.admin_user(:x_uid))->'user'->>'black_restored_at' is null, '다시 등록하면 복귀 날짜 비움');
+select test.ok((public.admin_set_black_reason(:x_uid, '노쇼 3회, 장비 파손'))->'user'->>'black_reason' = '노쇼 3회, 장비 파손', '블랙리스트인 동안 사유 수정');
+select test.ok((public.admin_set_black_reason(:x_uid, ''))->'user'->>'black_reason' is null, '사유 비우기');
+select test.ok((public.admin_set_black_reason(:x_uid, repeat('가', 250)))->'user'->>'black_reason' = repeat('가', 200), '사유는 200자까지');
+select test.ok((public.admin_set_black_reason(:x_uid, '노쇼'))->>'ok' = 'true', '사유 다시 적기');
+select test.ok((public.admin_set_status(:x_uid, 'active'))->'user'->>'black_reason' = '노쇼', '복귀해도 사유는 이력으로 남음');
+select test.ok((public.admin_user(:x_uid))->'user'->>'black_restored_at' is not null, '복귀 날짜 다시 기록');
+select test.ok((public.admin_set_black_reason(:x_uid, '바꾸기'))->>'ok' = 'false', '블랙리스트가 아니면 사유 수정 안 됨');
+select test.ok((public.admin_set_status(:x_uid, 'blacklisted'))->'user'->>'black_reason' is null, '사유 없이도 등록 가능');
+select test.ok((public.admin_set_status(:x_uid, 'active'))->>'ok' = 'true', '다시 복귀');
+set role anon;
+select test.denied($$select public.admin_set_black_reason(1, 'x')$$, '익명은 사유 수정 함수를 부를 수 없음');
+select test.ok((public.my_reservations('만료외부', '1212'))::text not like '%black%', '공개 내 예약 응답에는 블랙리스트 정보가 없음');
+reset role;
+
 select '모든 시험 통과' as 결과;
