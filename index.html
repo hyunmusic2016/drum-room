@@ -309,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.28.2";
+const APP_VERSION="v0.28.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -328,6 +328,13 @@ function feeLine(pi){return pi&&pi.fee?'<br>1회(1시간) 이용료 <b>'+Number(
 // "이용료 입금 계좌" 상자(예약 확정 화면, 내 예약에서 같이 씀, v0.25.0). 내용은 loadPayBox로 채움.
 function payCardHtml(id){return '<div class="card" style="text-align:left;margin:12px 0 0"><b>이용료 입금 계좌</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p><div id="'+id+'"><div class="ro" style="margin-top:8px">불러오는 중입니다…</div></div></div>'}
 function loadPayBox(sel,still){rpc("pay_info").then(pi=>{const el=$(sel);if(el&&(!still||still())){el.innerHTML=payBoxHtml(pi);bindPayCopy(el)}})} // 열 때마다 새로 받아 옴
+/* 입금 계좌(payBoxHtml)가 손님에게 보이는 곳 목록. 관리자 > 설정 > 입금 계좌 변경 화면에 그대로 보여 줍니다(v0.28.3).
+   ★ 계좌가 보이는 곳을 새로 만들거나 바꾸거나 없애면 이 목록도 함께 고칩니다(사용자 요청). */
+const PAY_PLACES=[
+  '<b>예약 확정 화면</b> (출입 비밀번호 위) — 일반회원이 정액권·횟수권 없이 예약했을 때, 또는 정액권·횟수권이 끝난 지 7일 안에 일반 예약으로 예약했을 때(재원생 정액권 포함)',
+  '<b>내 예약 &gt; 예약 현황</b> (출입 비밀번호 위) — 일반회원의 정액권·횟수권 없는 예약이 있을 때, 그 예약의 이용 시간이 끝날 때까지',
+  '<b>홈 &gt; [이용료 보기]</b> — 누구나 언제든(이용료 표 아래)'
+];
 function bindPayCopy(root){ // 계좌번호(숫자와 -)만 복사, 2초 동안 "복사했습니다"
   (root||document).querySelectorAll("[data-copyacc]").forEach(b=>b.onclick=async()=>{
     const ok=await copyText(b.dataset.copyacc);b.textContent=ok?"복사했습니다":"복사 실패";setTimeout(()=>{b.textContent="계좌번호 복사"},2000);
@@ -1353,11 +1360,11 @@ function doorHtml(){
 function payHtml(){
   if(!A.pay)return '<p class="hint">불러오는 중입니다…</p>';
   const f=(k,l,ph,extra)=>'<label for="pa_'+k+'">'+l+'</label><input type="text" id="pa_'+k+'" autocomplete="off" placeholder="'+ph+'"'+(extra||'')+' value="'+esc(A.pay[k]||"")+'">';
-  return '<div class="card"><p class="hint" style="margin-top:0">일반회원 예약(정액권·횟수권 없이 하는 예약)의 예약 확정 화면과 내 예약에 보입니다. 저장하면 바로 바뀝니다. 1회 이용료는 설정 > 이용료 변경에서 바꿉니다.</p>'+
+  return '<div class="card">'+
     '<div class="cols c2"><div>'+f("bank","은행명","예: 농협",' maxlength="20"')+'</div><div>'+f("holder","예금주","예: 현실용음악학원",' maxlength="20"')+'</div></div>'+
     f("number","계좌번호","예: 123-4567-8901-23",' maxlength="30" inputmode="numeric"')+
     '<div id="paMsg"></div><button class="btn" id="paGo">저장</button></div>'+
-    '<div class="card"><div class="part" style="margin-top:0">화면에 보이는 모습</div><div id="paPrev">'+payBoxHtml(A.pay)+'</div></div>';
+    '<div class="card"><div class="part" style="margin-top:0">계좌번호가 보이는 곳</div><ol style="margin:0;padding-left:20px;line-height:1.7">'+PAY_PLACES.map(x=>'<li style="margin:6px 0">'+x+'</li>').join("")+'</ol><p class="hint">저장하면 위의 모든 곳에 바로 바뀝니다.</p></div>';
 }
 /* 설정 > 이용료 변경(v0.26.0, 서버 022): 1회 이용료 + 상품 가격 표(일반회원 정액권·횟수권, 재원생 정액권, 모두 30일 기준).
    종류마다 줄을 더하거나(최대 10개) 지울 수 있고, [저장]을 눌러야 서버에 반영됩니다. 처음(저장한 상품이 없으면)엔 빈 줄 3개. */
@@ -1409,14 +1416,13 @@ function bindFee(){
   };
 }
 function bindPay(){
-  if(!$("#paGo"))return;bindPayCopy($("#paPrev"));
+  if(!$("#paGo"))return;
   $("#paGo").onclick=async()=>{
     const p={};["bank","holder","number"].forEach(k=>p[k]=$("#pa_"+k).value); // 이용료는 설정 > 이용료 변경에서 따로 저장(v0.25.0, 서버 021부터 계좌 저장 때 이용료 유지)
     $("#paGo").disabled=true;const r=await rpc("admin_set_pay",{p});if($("#paGo"))$("#paGo").disabled=false;
     if(r.auth){adminExpired();return}
     if(!r.ok){$("#paMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
     A.pay=r;["bank","holder","number"].forEach(k=>$("#pa_"+k).value=r[k]);
-    $("#paPrev").innerHTML=payBoxHtml(r);bindPayCopy($("#paPrev"));
     $("#paMsg").innerHTML='<div class="msg ok">입금 계좌를 저장하였습니다.</div>';
   };
 }
