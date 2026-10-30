@@ -286,7 +286,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.6";
+const APP_VERSION="v0.21.7";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1095,7 +1095,7 @@ function userViewHtml(){
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
     '<div class="part" style="margin-top:22px">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
     '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
-    '<div style="margin-top:22px">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div></div>';
+    '</div><div class="card">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div>'; // 예약 기록·만료된 상품은 따로 된 상자(v0.21.7)
 }
 function bindUserView(){
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
