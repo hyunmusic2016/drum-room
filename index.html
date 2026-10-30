@@ -290,7 +290,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.12";
+const APP_VERSION="v0.21.13";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1091,7 +1091,7 @@ function userViewHtml(){
   }else{
     prod='<p class="hint" style="margin:0">사용 중인 정액권·횟수권이 없습니다.</p>'+(q?'<p class="hint">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'');
   }
-  return '<div class="card"><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span>'+(c?'<span class="badge '+c.kind+'">'+PROD[c.kind]+'</span>':'')+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+'</div>'+
+  return '<div class="card"><div class="part" style="margin-top:0">이용자 정보</div><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span>'+(c?'<span class="badge '+c.kind+'">'+PROD[c.kind]+'</span>':'')+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+'</div>'+
     (u.status==="blacklisted"?'<label>블랙리스트 사유 <small class="hint">등록 '+esc(dOnly(u.black_at||u.status_at))+'</small></label><div class="ro">'+(u.black_reason?esc(u.black_reason):'<span class="hint" style="margin:0">없음</span>')+'</div>':
      '')+
     '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
