@@ -309,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.28.1";
+const APP_VERSION="v0.28.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1381,13 +1381,16 @@ function feeHtml(){
   const f0=(A.prices.ok&&A.prices.fee!=null?A.prices.fee:A.pay.fee)||"",fee=A.feeDraft!=null?A.feeDraft:(f0?Number(f0).toLocaleString("ko-KR"):"");
   const box=(k,title,exp)=>{const [,,word,max]=PRICE_KINDS.find(x=>x[0]===k);return '<div class="card" data-pk="'+k+'"><div class="part" style="margin-top:0">'+title+' <small style="font-weight:400;color:var(--sub)">· 30일</small></div><p class="pexp">'+exp+'</p>'+priceRowsHtml(k,word,max)+'</div>'};
   // 관리자 화면은 짧게, 자세한 설명은 손님이 보는 [이용료 보기] 창에(v0.27.1)
+  const group=(title,col,x)=>'<div class="cardgroup"><div class="part" style="margin:12px 4px 2px;color:var('+col+')">'+title+'</div>'+x+'</div>';
   const FLAT='30일 동안 <b>하루 정해진 횟수</b>까지 예약할 수 있습니다(매일 다시 채워짐).';
   const CNT='30일 안에 <b>총 정해진 횟수</b>만큼 예약할 수 있습니다(하루 제한 없음).';
   return (A.prices.ok?'':'<div class="msg err">이용료 표를 불러오지 못했습니다. Supabase에 022를 실행했는지 확인하십시오.</div>')+
-    '<div class="card"><div class="part" style="margin-top:0">1회 이용료<span class="hr1">1시간</span></div>'+
+    // 손님용 이용료 안내 창과 같은 모양: 큰 상자 "일반회원"(1회 이용료·정액권·횟수권) / "재원생"(정액권)(v0.28.2)
+    group("일반회원","--ext-text",
+      '<div class="card"><div class="part" style="margin-top:0">1회 이용료<span class="hr1">1시간</span></div>'+
       '<div class="prow"><input type="text" id="fe_fee" class="pp" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 7000" value="'+esc(fee)+'"><span>원</span></div></div>'+
-    '<div class="cardgroup"><div class="part" style="margin:12px 4px 4px;border-bottom:0">일반회원 상품</div>'+box("ext_flat","일반회원 정액권",FLAT)+box("ext_count","일반회원 횟수권",CNT)+'</div>'+
-    box("stu_flat","재원생 정액권",FLAT+' 재원생은 횟수권이 없습니다.')+
+      box("ext_flat","정액권",FLAT)+box("ext_count","횟수권",CNT))+
+    group("재원생","--stu-text",box("stu_flat","정액권",FLAT+' 재원생은 횟수권이 없습니다.'))+
     '<div class="card"><p class="hint" style="margin-top:0">상품 추가·삭제와 가격 변경은 [저장]을 눌러야 반영됩니다. 횟수와 가격이 모두 빈 줄은 저장하지 않습니다.</p><div id="feMsg"></div><button class="btn" id="feGo">저장</button></div>';
 }
 function bindFee(){
