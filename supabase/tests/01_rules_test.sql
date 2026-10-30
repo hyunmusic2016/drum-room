@@ -265,4 +265,39 @@ set role anon;
 select test.denied($$select public.cleanup_status()$$, '익명은 정리 상태 함수를 부를 수 없음');
 reset role;
 
+-- ===== 15. 상품 기간이 끝나면 이용자 현황에서 '일반'으로 (2026-10-30 확인) =====
+-- 이용자 현황 화면은 admin_users의 current(종료일이 오늘 이후인 상품)가 있으면 그 칸, 없으면 '일반'에 둡니다.
+set app.fake_now = '2026-12-20 12:00:00';
+set request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000a"}';
+set role authenticated;
+select test.ok((public.admin_create_user('{"type":"ext","name":"만료외부","pw":"1212","phone":"01012121212",
+  "prod":{"kind":"count","start":"2026-12-20","days":2,"total":5}}'))->>'ok' = 'true', '만료 시험: 외부 횟수권(12/20~12/21) 등록');
+select test.ok((public.admin_create_user('{"type":"stu","name":"만료정액","pw":"3434","phone":"01034343434",
+  "prod":{"kind":"flat","start":"2026-12-20","days":1,"limit":3}}'))->>'ok' = 'true', '만료 시험: 재원생 정액권(12/20 하루) 등록');
+reset role;
+select id as x_uid from public.users where name = '만료외부' \gset
+select id as f_uid from public.users where name = '만료정액' \gset
+set role authenticated;
+select test.ok((public.admin_user(:x_uid))->'user'->'current'->>'kind' = 'count', '12/20: 만료외부는 횟수권 칸');
+select test.ok((public.admin_user(:f_uid))->'user'->'current'->>'kind' = 'flat', '12/20: 만료정액은 정액권 칸');
+
+reset role; set app.fake_now = '2026-12-21 09:00:00'; set role authenticated;
+select test.ok((public.admin_user(:f_uid))->'user'->'current' = 'null'::jsonb, '12/21: 정액권 종료일(12/20) 다음 날 → current 없음(일반 칸)');
+select test.ok((public.admin_user(:f_uid))->'user'->'last'->>'end' = '2026-12-20', '12/21: 만료된 정액권 기록(종료 12/20)은 남음');
+select test.ok((public.admin_user(:x_uid))->'user'->'current'->>'kind' = 'count', '12/21: 횟수권은 종료일 당일까지 횟수권 칸');
+select test.ok(exists (select 1 from jsonb_array_elements((public.admin_users())->'users') e
+                 where (e->>'id')::bigint = :f_uid and e->'current' = 'null'::jsonb), '12/21: 이용자 목록(admin_users)에서도 정액권 없음');
+
+reset role; set app.fake_now = '2026-12-22 09:00:00'; set role authenticated;
+select test.ok((public.admin_user(:x_uid))->'user'->'current' = 'null'::jsonb, '12/22: 횟수권(남은 횟수 있어도) 종료일 지나면 current 없음(일반 칸)');
+select test.ok((public.admin_user(:x_uid))->'user'->'last'->>'kind' = 'count', '12/22: 만료된 횟수권 기록은 남음');
+
+-- 만료 뒤 예약 규칙: 외부 이용자는 상품 없는 일반(횟수 제한 없음), 재원생은 하루 1회
+set role anon;
+select test.ok((select r->>'ok' = 'true' and r->>'prod' is null from (select public.reserve('2026-12-22', 15, '만료외부', '1212', true, 'ext') r) x), '만료 뒤 외부: 상품 없이 예약됨');
+select test.ok((public.reserve('2026-12-22', 16, '만료외부', '1212', true, 'ext'))->>'ok' = 'true', '만료 뒤 외부: 같은 날 2번째도 가능(제한 없음)');
+select test.ok((select r->>'ok' = 'true' and r->>'prod' is null from (select public.reserve('2026-12-22', 17, '만료정액', '3434', true, 'stu') r) x), '만료 뒤 재원생: 정액권 없이 예약됨');
+select test.ok((public.reserve('2026-12-22', 18, '만료정액', '3434', true, 'stu'))->>'msg' like '%하루에 한 번%', '만료 뒤 재원생: 하루 1회로 막힘');
+reset role;
+
 select '모든 시험 통과' as 결과;
