@@ -238,7 +238,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
     <div id="bookMsg" role="status"></div>
     <div class="legend"><span>예약 가능</span><span class="lg stu">재원생 예약</span><span class="lg ext">외부 이용자 예약</span><span>▨ 이용 불가</span><span style="display:inline-flex;gap:6px"><i class="badge flat">정액권</i><i class="badge count">횟수권</i></span></div>
     <div class="part">오전<small>00:00–12:00</small></div><div class="grid" id="grid"></div><div class="part">오후<small>12:00–24:00</small></div><div class="grid" id="grid2"></div>
-    <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (정액권 회원 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
+    <div class="card rules"><b>연습실 이용 주의사항</b><ul><li>예약한 시간에만 이용하고, 종료 시각에는 정리 후 퇴실하십시오.</li><li>예약자 본인만 이용할 수 있습니다. 예약을 다른 사람에게 양도하지 마십시오.</li><li>하루에 한 번, 1시간만 예약할 수 있습니다. (정액권 이용자 제외)</li><li>장비는 사용 후 원래 자리에 두십시오.</li><li>장비가 고장 나거나 파손되면 즉시 학원에 알리십시오.</li><li>음식물 반입을 금지합니다. 음료는 뚜껑이 있는 것만 허용합니다.</li><li>시작된 예약은 직접 취소할 수 없습니다. 학원에 문의하십시오.</li></ul><p class="hint">※ 예시 문구입니다. 학원 규정에 맞게 수정하십시오.</p></div>
   </section>
 
   <section id="v-mine" class="hidden">
@@ -276,7 +276,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.19.3";
+const APP_VERSION="v0.19.4";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -464,7 +464,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       const p=r.product;if(!(p.start<=D&&D<=p.end))return;
       const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
       const remain=p.kind==="count"?prodLeftText(p,D):(D===allowedDates()[0]?"오늘":"내일")+" 이용 "+prodLeftText(p,D);
-      $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+' 회원</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+leftText(p)+'</span>';
+      $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+'</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+leftText(p)+'</span>';
     },350);
   };
   $("#rName").oninput=badge;$("#rPw").oninput=badge;
@@ -725,7 +725,7 @@ $("#mFind").onclick=async()=>{
   let h="";
   if(r.product){
     const P=r.product,dts=allowedDates(),col=P.target==="ext"?"--ext-text":"--stu-text";
-    h+='<div class="card"><b>'+PROD[P.kind]+' 회원</b><span class="badge '+P.kind+'">'+PROD[P.kind]+'</span>'+
+    h+='<div class="card"><span class="badge '+P.kind+'" style="margin-left:0">'+PROD[P.kind]+'</span>'+
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+leftText(P)+'</div></div>';
   }
