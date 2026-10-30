@@ -57,7 +57,7 @@ select test.ok((public.reserve('2026-10-27', 15, '이서연', '22a2', true, 'stu
 select test.ok((public.reserve('2026-10-27', 23, '이서연', '2222', true, 'stu'))->>'ok' = 'true', '23시 칸 예약 가능');
 
 -- ===== 4. 외부 이용자: 미등록은 막힘, 5회 실패 시 잠금 =====
-select test.ok((public.reserve('2026-10-27', 18, '박미등', '1234', true, 'ext'))->>'msg' like '등록된 외부 이용자%', '미등록 외부 이용자는 막힘');
+select test.ok((public.reserve('2026-10-27', 18, '박미등', '1234', true, 'ext'))->>'msg' like '등록된 일반회원%', '미등록 외부 이용자는 막힘');
 select public.reserve('2026-10-27', 18, '박미등', '1234', true, 'ext') from generate_series(1, 4);
 select test.ok((public.reserve('2026-10-27', 18, '박미등', '1234', true, 'ext'))->>'msg' like '시도 횟수를 초과%', '5회 실패 후 잠금');
 
@@ -157,7 +157,7 @@ select (public.admin_reservations())->'list' @> '[{"name":"남궁민수","super"
 select test.ok(:'sp', '관리자 목록에 슈퍼패스 표시');
 select test.ok((public.admin_reserve('2026-10-27', 15, '남궁민수', null, false, true))->>'msg' like '다른 분이 방금%', '슈퍼패스도 중복은 막힘');
 select test.ok((public.admin_reserve('2026-10-27', 10, '남궁민수', null, false, true))->>'msg' like '이미 지난 시간%', '슈퍼패스도 지난 시간은 막힘');
-select test.ok((public.admin_reserve('2026-10-27', 16, '남궁민수', null, true, false))->>'msg' like '등록되지 않은 외부 이용자%', '일반예약: 미등록 외부 이용자 막힘');
+select test.ok((public.admin_reserve('2026-10-27', 16, '남궁민수', null, true, false))->>'msg' like '등록되지 않은 일반회원%', '일반예약: 미등록 외부 이용자 막힘');
 select test.ok((public.admin_reserve('2026-10-27', 16, '박재원', null, false, false))->>'ok' = 'true', '일반예약: 미등록 재원생 1회');
 select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false, false))->>'msg' like '재원생은 하루에 한 번만%', '일반예약: 재원생 2회째 막힘');
 select test.ok((public.admin_reserve('2026-10-27', 18, '박재원', null, false, true))->>'ok' = 'true', '슈퍼패스: 재원생 2회째도 예약');
@@ -244,7 +244,7 @@ select test.ok((public.admin_set_status(:ext_uid, 'expired'))->'user'->>'status'
 reset role;
 select test.ok(not exists (select 1 from public.products where id = :ext_pid), '사용만료: 오늘 시작한 횟수권은 삭제');
 set role anon;
-select test.ok((public.reserve('2026-10-28', 13, '김외부', '0000', true, 'ext'))->>'msg' like '등록된 외부 이용자%', '사용만료된 외부 이용자는 예약 불가');
+select test.ok((public.reserve('2026-10-28', 13, '김외부', '0000', true, 'ext'))->>'msg' like '등록된 일반회원%', '사용만료된 외부 이용자는 예약 불가');
 reset role; set role authenticated;
 select test.ok((public.admin_set_status(:ext_uid, 'blacklisted'))->'user'->>'status' = 'blacklisted', '블랙리스트 등록(015, 사용만료 상태에서도 가능)');
 select test.ok((public.admin_set_status(:ext_uid, 'active'))->'user'->>'status' = 'active', '다시 사용');
@@ -368,7 +368,7 @@ reset role;
 set role anon;
 select (public.reserve('2026-12-23', 10, '만료외부', '1212', true, 'ext'))->>'id' as bl_rid \gset
 reset role; set role authenticated;
-select test.ok((public.admin_set_status(:f_uid, 'blacklisted'))->>'msg' like '블랙리스트는 외부 이용자만%', '재원생은 블랙리스트 등록 불가');
+select test.ok((public.admin_set_status(:f_uid, 'blacklisted'))->>'msg' like '블랙리스트는 일반회원만%', '재원생은 블랙리스트 등록 불가');
 select test.ok(((public.admin_set_status(:x_uid, 'blacklisted'))->>'cancelled')::int >= 1, '블랙리스트 등록 → 앞으로의 확정 예약 자동 취소');
 reset role;
 select test.ok(not exists (select 1 from public.reservations where user_id = :x_uid and status = 'confirmed' and not public.slot_ended(date, hour)),
@@ -382,7 +382,7 @@ select test.ok((public.admin_set_status(:x_uid, 'blacklisted'))->>'msg' like '�
 select test.ok((public.admin_user(:x_uid))->'user'->>'status' = 'blacklisted', '이용자 정보에 상태 blacklisted');
 set role anon;
 select test.ok((public.reserve('2026-12-23', 11, '만료외부', '1212', true, 'ext'))->>'msg' = '현재 예약이 제한되어 있습니다. 관리자에게 문의하십시오.', '블랙리스트 외부 이용자 예약 → 제한 안내');
-select test.ok((public.reserve('2026-12-23', 11, '만료외부', '9999', true, 'ext'))->>'msg' like '등록된 외부 이용자 정보와 일치하지 않습니다%', '비밀번호가 틀리면 블랙리스트 여부를 알려 주지 않음');
+select test.ok((public.reserve('2026-12-23', 11, '만료외부', '9999', true, 'ext'))->>'msg' like '등록된 일반회원 정보와 일치하지 않습니다%', '비밀번호가 틀리면 블랙리스트 여부를 알려 주지 않음');
 select test.ok((public.my_reservations('만료외부', '1212'))->>'ok' = 'true', '블랙리스트여도 내 예약 조회는 가능(취소 사유 확인)');
 reset role; set role authenticated;
 select test.ok(exists (select 1 from jsonb_array_elements((public.admin_find_users('만료외부', '2026-12-23'))->'users') e where e->>'status' = 'blacklisted'),
@@ -482,6 +482,11 @@ select test.ok((public.product_info('ext', '칠일시험', '4545'))->>'registere
 select test.ok((public.product_info('ext', '휴면외부', '5656'))->>'registered' = 'true' and (public.product_info('ext', '휴면외부', '5656'))->'product' = 'null'::jsonb, '상품 없는 등록 외부 이용자도 registered');
 select test.ok((public.product_info('ext', '휴면외부', '0000'))->>'registered' is null, '비밀번호가 틀리면 registered 없음');
 select test.ok((public.product_info('ext', '없는사람', '1234'))->>'registered' is null, '미등록 이름은 registered 없음');
+reset role;
+
+-- ===== 24. "외부 이용자" → "일반회원" 문구 (020) =====
+set role authenticated;
+select test.ok((public.admin_create_user('{"type":"x","name":"문구시험","pw":"1234","phone":"01012341234"}'))->>'msg' = '재원생 또는 일반회원을 선택하십시오.', '이용자 등록 구분 안내 문구');
 reset role;
 
 select '모든 시험 통과' as 결과;
