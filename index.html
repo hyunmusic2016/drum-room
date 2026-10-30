@@ -286,7 +286,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.8";
+const APP_VERSION="v0.21.9";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -862,7 +862,7 @@ function userFields(p,u){
   u=u||{};const req='<span class="req" aria-hidden="true">*</span>';
   return '<div class="cols c2"><div><label for="'+p+'Name">이름 (본명) '+req+'</label><input type="text" id="'+p+'Name" aria-required="true" autocomplete="off" value="'+esc(u.name||"")+'"></div><div><label for="'+p+'Pw">비밀번호 4자리 '+(u.name?'':req)+'</label><input type="password" id="'+p+'Pw" inputmode="numeric" maxlength="4" autocomplete="off"'+(u.name?' placeholder="변경 시에만 입력"':' aria-required="true"')+'></div></div>'+
     '<div class="cols c2"><div><label for="'+p+'Phone">전화번호 '+req+'</label><input type="tel" id="'+p+'Phone" aria-required="true" inputmode="tel" autocomplete="off" placeholder="010-0000-0000" value="'+esc(u.phone||"")+'"></div><div><label for="'+p+'Part">파트</label><input type="text" id="'+p+'Part" maxlength="20" autocomplete="off" placeholder="예: 드럼" value="'+esc(u.part||"")+'"></div></div>'+
-    '<label for="'+p+'Memo">메모 (선택)</label><input type="text" id="'+p+'Memo" maxlength="100" autocomplete="off" value="'+esc(u.memo||"")+'">';
+    '<label for="'+p+'Memo">메모</label><input type="text" id="'+p+'Memo" maxlength="100" autocomplete="off" value="'+esc(u.memo||"")+'">';
 }
 function readUserFields(p,isNew){ // 화면에서 먼저 형식만 확인합니다(최종 확인은 서버).
   const name=norm($("#"+p+"Name").value.trim()),pw=$("#"+p+"Pw").value,phone=fmtPhone($("#"+p+"Phone").value);
