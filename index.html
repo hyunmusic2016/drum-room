@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.16";
+const APP_VERSION="v0.21.17";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -485,7 +485,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
         const day=D===allowedDates()[0]?"오늘":"내일",P=PROD[p.kind];
         prodWarnKind=P;
         prodWarn=P+" 기간("+sh(p.end)+"까지)이 지나 "+day+" 예약은 "+P+"이 아닌 일반 예약"+(p.kind==="flat"&&!EXT?"(하루 1회)":"")+"으로 잡힙니다.";
-        $("#rBadge").innerHTML='<div class="msg warn" style="margin:6px 0 0">⚠ '+esc(prodWarn)+(p.kind==="count"?" 횟수권 횟수는 쓰지 않습니다.":"")+' 계속 '+P+'으로 이용하시려면 관리자에게 문의하십시오.</div>';
+        $("#rBadge").innerHTML='<div class="msg warn" style="margin:6px 0 0">⚠ '+esc(prodWarn)+' 계속 '+P+'으로 이용하시려면 관리자에게 문의하십시오.</div>';
         return;
       }
       if(!(p.start<=D&&D<=p.end))return;
