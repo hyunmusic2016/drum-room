@@ -293,7 +293,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.25.1";
+const APP_VERSION="v0.25.2";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -305,7 +305,7 @@ const PHONE="010-7753-8730";
 function payBoxHtml(pi){ // 계좌 상자(계좌번호 복사 버튼 포함). pi: pay_info 응답
   if(!pi||!pi.ok)return '<div class="ro" style="margin-top:8px">'+esc(NET_MSG)+'</div>';
   if(!pi.number)return '<div class="ro" style="margin-top:8px">입금 계좌가 아직 등록되지 않았습니다. 관리자에게 문의하십시오.</div>';
-  return '<div class="ro" style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:10px"><div style="flex:1 1 auto">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b><br>예금주 '+esc(pi.holder)+feeLine(pi)+'</div>'+ // 1회 이용료는 설정 > 이용료 변경(v0.25.0, 비어 있으면 줄 없음)
+  return '<div class="ro" style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:10px"><div style="flex:1 1 auto">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b>'+feeLine(pi)+'<div style="font-size:13px;color:var(--sub);margin-top:2px">예금주: '+esc(pi.holder)+'</div></div>'+ // 1회 이용료는 설정 > 이용료 변경(v0.25.0, 비어 있으면 줄 없음), 예금주는 참고용이라 작은 회색 글씨로 맨 아래(v0.25.2)
     '<button type="button" class="btn ghost small" data-copyacc="'+esc(pi.number)+'" style="flex:none;margin:0">계좌번호 복사</button></div>';
 }
 function feeLine(pi){return pi&&pi.fee?'<br>1회 이용료 <b>'+Number(pi.fee).toLocaleString("ko-KR")+'원</b>':""}
