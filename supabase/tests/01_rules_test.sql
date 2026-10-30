@@ -489,4 +489,18 @@ set role authenticated;
 select test.ok((public.admin_create_user('{"type":"x","name":"문구시험","pw":"1234","phone":"01012341234"}'))->>'msg' = '재원생 또는 일반회원을 선택하십시오.', '이용자 등록 구분 안내 문구');
 reset role;
 
+-- ===== 25. 1회 이용료 (021) =====
+set role anon;
+select test.denied($$select public.admin_set_fee('5000')$$, '익명은 이용료를 바꿀 수 없음');
+reset role; set role authenticated;
+select test.ok((public.admin_set_fee('5천원'))->>'msg' like '이용료는%', '이용료는 숫자만');
+select test.ok((public.admin_set_fee('7,000원'))->>'fee' = '7000', '이용료 저장(쉼표·원 정리)');
+select test.ok((public.pay_info())->>'number' = '123-4567-8901-23', '이용료를 바꿔도 계좌는 그대로');
+select test.ok((public.admin_set_pay('{"bank":"신한","holder":"현실용음악학원","number":"110-123-456789"}'))->>'fee' = '7000', '계좌만 저장하면 이용료는 그대로');
+set role anon;
+select test.ok((public.pay_info())->>'fee' = '7000' and (public.pay_info())->>'bank' = '신한', '공개 화면에 계좌·이용료 함께 보임');
+reset role; set role authenticated;
+select test.ok((public.admin_set_fee(''))->>'fee' = '', '이용료 비우기');
+reset role;
+
 select '모든 시험 통과' as 결과;
