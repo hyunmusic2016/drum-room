@@ -309,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.27.0";
+const APP_VERSION="v0.27.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -880,8 +880,20 @@ async function openPriceSheet(){
   const won=v=>Number(v).toLocaleString("ko-KR")+'원';
   const rows=(l,word)=>l.map(x=>'<div class="plrow"><span>'+word+' <b style="font-size:inherit">'+x.n+'회</b> · 30일</span><b>'+won(x.price)+'</b></div>').join("");
   const box=(title,col,inner)=>'<div class="card" style="margin:12px 0 0"><div class="part" style="margin-top:0;color:var('+col+')">'+title+'</div>'+inner+'</div>';
-  const sub=(name,cls,exp,l,word)=>l.length?'<div style="margin-top:10px"><span class="badge '+cls+'" style="margin-left:0">'+name+'</span><p class="pexp" style="margin:6px 0 0">'+exp+'</p>'+rows(l,word)+'</div>':'';
-  const FL='30일 동안 <b>하루 정해진 횟수</b>까지 예약할 수 있습니다(매일 다시 채워짐).',CN='30일 안에 <b>총 정해진 횟수</b>만큼 예약할 수 있습니다(하루 제한 없음).';
+  const sub=(name,cls,exp,l,word)=>l.length?'<div style="margin-top:10px"><span class="badge '+cls+'" style="margin-left:0">'+name+'</span><div class="pexp" style="margin:6px 0 0">'+exp+'</div>'+rows(l,word)+'</div>':'';
+  // 손님용 자세한 설명(v0.27.1, 관리자 화면은 짧은 설명)
+  const ul=a=>'<ul style="margin:4px 0 2px;padding-left:18px">'+a.map(x=>'<li>'+x+'</li>').join("")+'</ul>';
+  const FL='<b>시작일부터 30일 동안, 매일 정해진 횟수만큼</b> 예약할 수 있는 상품입니다.'+ul([
+    '하루 횟수는 <b>매일 다시 채워집니다.</b>',
+    '그날 쓰지 않은 횟수는 <b>다음 날로 넘어가지 않습니다.</b>',
+    '예약을 취소하면 그날 횟수를 돌려받습니다.',
+    '예: 하루 1회 정액권 → 30일 동안 매일 1시간씩 이용']);
+  const CN='<b>시작일부터 30일 안에, 정해진 총 횟수만큼</b> 예약할 수 있는 상품입니다.'+ul([
+    '원하는 날에 몰아서 쓸 수 있습니다(<b>하루 제한 없음</b>).',
+    '예약할 때마다 1회씩 줄어들고, 취소하면 돌려받습니다.',
+    '<b>30일이 지나면 남은 횟수는 쓸 수 없습니다.</b>',
+    '일반회원만 이용할 수 있습니다.',
+    '예: 10회 횟수권 → 30일 안에 원하는 날 10시간 이용']);
   const ef=P.ext_flat||[],ec=P.ext_count||[],sf=P.stu_flat||[];
   let h='<div class="onehr"><b>1회 = 1시간 예약</b><span>이용료와 정액권·횟수권의 횟수는 모두 1시간 예약 1번을 1회로 셉니다.</span></div>';
   const ext=(P.fee?'<div class="plrow"><span>1회(1시간) 이용료</span><b>'+won(P.fee)+'</b></div>':'')+sub("정액권","flat",FL,ef,"하루")+sub("횟수권","count",CN,ec,"총");
@@ -1366,14 +1378,15 @@ function feeHtml(){
   if(!A.pay||!A.prices)return '<p class="hint">불러오는 중입니다…</p>';
   const f0=(A.prices.ok&&A.prices.fee!=null?A.prices.fee:A.pay.fee)||"",fee=A.feeDraft!=null?A.feeDraft:(f0?Number(f0).toLocaleString("ko-KR"):"");
   const box=(k,title,exp)=>{const [,,word,max]=PRICE_KINDS.find(x=>x[0]===k);return '<div class="card" data-pk="'+k+'"><div class="part" style="margin-top:0">'+title+' <small style="font-weight:400;color:var(--sub)">· 30일</small><span class="hr1">1회 = 1시간</span></div><p class="pexp">'+exp+'</p>'+priceRowsHtml(k,word,max)+'</div>'};
-  const FLAT='<b>30일 동안 하루 정해진 횟수만큼</b> 예약할 수 있는 상품입니다. 하루 횟수는 매일 다시 채워지며, 그날 쓰지 않은 횟수는 다음 날로 넘어가지 않습니다.<br>예: 하루 1회 · 100,000원 → 30일 동안 매일 1시간씩';
-  const CNT='<b>30일 안에 정해진 총 횟수만큼</b> 예약할 수 있는 상품입니다. 하루에 몇 번이든 쓸 수 있으며, 30일이 지나면 남은 횟수는 쓸 수 없습니다.<br>예: 총 10회 · 60,000원 → 30일 안에 아무 날이나 10시간';
+  // 관리자 화면은 짧게, 자세한 설명은 손님이 보는 [이용료 보기] 창에(v0.27.1)
+  const FLAT='30일 동안 <b>하루 정해진 횟수</b>까지 예약할 수 있습니다(매일 다시 채워짐).';
+  const CNT='30일 안에 <b>총 정해진 횟수</b>만큼 예약할 수 있습니다(하루 제한 없음).';
   return (A.prices.ok?'':'<div class="msg err">이용료 표를 불러오지 못했습니다. Supabase에 022를 실행했는지 확인하십시오.</div>')+
     '<div class="onehr"><b>1회 = 1시간 예약</b><span>1회 이용료, 정액권의 하루 횟수, 횟수권의 총 횟수는 모두 <b style="display:inline;font-size:inherit">1시간 예약 1번</b>을 1회로 셉니다.</span></div>'+
     '<div class="card"><div class="part" style="margin-top:0">1회 이용료<span class="hr1">1시간</span></div><p class="pexp">일반회원이 정액권·횟수권 없이 <b>한 번(1시간)</b> 예약할 때의 이용료입니다. 예약 확정 화면과 내 예약의 입금 계좌 상자에 함께 보입니다. 비워 두면 보이지 않습니다.</p>'+
       '<div class="prow"><input type="text" id="fe_fee" class="pp" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="예: 7000" value="'+esc(fee)+'"><span>원</span></div></div>'+
     '<div class="cardgroup"><div class="part" style="margin:12px 4px 4px;border-bottom:0">일반회원 상품</div>'+box("ext_flat","일반회원 정액권",FLAT)+box("ext_count","일반회원 횟수권",CNT)+'</div>'+
-    box("stu_flat","재원생 정액권",FLAT.replace("100,000원","50,000원")+'<br>재원생은 횟수권이 없습니다.')+
+    box("stu_flat","재원생 정액권",FLAT+' 재원생은 횟수권이 없습니다.')+
     '<div class="card"><p class="hint" style="margin-top:0">상품 추가·삭제와 가격 변경은 [저장]을 눌러야 반영됩니다. 횟수와 가격이 모두 빈 줄은 저장하지 않습니다.</p><div id="feMsg"></div><button class="btn" id="feGo">저장</button></div>'+
     '<div class="card"><div class="part" style="margin-top:0">1회 이용료가 손님 화면에 보이는 모습</div><div id="fePrev">'+payBoxHtml(A.pay)+'</div></div>';
 }
