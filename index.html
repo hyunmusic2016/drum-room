@@ -291,13 +291,15 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.15";
+const APP_VERSION="v0.21.16";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
 const SUPABASE_KEY="sb_publishable_EuDlhpMAm69J4qB0pMFVYA_bh5RWzo2";
 const DAYS_KO=["일","월","화","수","목","금","토"];
 const PHONE="010-7753-8730";
+// 상품 기간이 끝난 날짜를 일반 예약할 때 안내하는 입금 계좌·이용료(v0.21.16). ※ 정식 오픈 전 실제 값으로 바꿀 것(CLAUDE.md 남은 일)
+const PAY_ACCOUNT="계좌번호 입력 예정",PAY_FEE="0000";
 const CONTACT_HOURS="매일 오전 9시 ~ 밤 10시"; // 문의 가능 시간(학원 운영에 맞게 수정)
 const PROD={flat:"정액권",count:"횟수권"};
 const PERIOD_DAYS=30;  // 정액권·횟수권 기본 기간(일)
@@ -468,9 +470,9 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   if(EXT)$("#firstGo").onclick=()=>openFirstGuide(h);
   /* 이름과 비밀번호가 모두 맞을 때만 서버가 상품 정보를 줍니다(결정 사항 2). 입력이 멈추면 한 번 물어봅니다. */
   let bt=null,bseq=0;
-  let prodWarn=""; // 이 날짜가 상품 기간 뒤면 안내 문구(완료 화면에도 다시 보여 줌)
+  let prodWarn="",prodWarnKind="",warnOk=false; // 이 날짜가 상품 기간 뒤면 안내 문구(완료 화면에도 다시 보여 줌)
   const badge=()=>{
-    clearTimeout(bt);$("#rBadge").innerHTML="";prodWarn="";
+    clearTimeout(bt);$("#rBadge").innerHTML="";prodWarn="";prodWarnKind="";warnOk=false;
     const n=$("#rName").value.trim(),pw=$("#rPw").value;
     if(!n||!/^\d{4}$/.test(pw))return;
     const my=++bseq;
@@ -481,6 +483,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
       if(D>p.end){ // 상품이 이 날짜 전에 끝남 → 상품이 아닌 일반 예약으로 잡힌다고 미리 알림(v0.21.15)
         const day=D===allowedDates()[0]?"오늘":"내일",P=PROD[p.kind];
+        prodWarnKind=P;
         prodWarn=P+" 기간("+sh(p.end)+"까지)이 지나 "+day+" 예약은 "+P+"이 아닌 일반 예약"+(p.kind==="flat"&&!EXT?"(하루 1회)":"")+"으로 잡힙니다.";
         $("#rBadge").innerHTML='<div class="msg warn" style="margin:6px 0 0">⚠ '+esc(prodWarn)+(p.kind==="count"?" 횟수권 횟수는 쓰지 않습니다.":"")+' 계속 '+P+'으로 이용하시려면 관리자에게 문의하십시오.</div>';
         return;
@@ -492,8 +495,26 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   };
   $("#rName").oninput=badge;$("#rPw").oninput=badge;
   let busy=false;
+  // 상품 기간이 끝난 날짜면 [예약하기]를 눌렀을 때 한 번 더 안내(연장 신청 또는 이용료 입금 후 일반 예약)(v0.21.16)
+  const payPop=()=>{
+    const kids=[...$("#sheet").children];kids.forEach(k=>k.classList.add("hidden"));
+    const P=prodWarnKind,pop=document.createElement("div");pop.id="payPop";
+    pop.innerHTML='<div class="row" style="align-items:flex-start"><h2 style="margin:0">'+esc(P)+' 기간이 끝났습니다</h2><button class="btn ghost small" id="ppBack">← 뒤로</button></div>'+
+      '<div class="msg warn" style="margin-top:12px">'+esc(prodWarn)+'</div>'+
+      '<div class="card" style="margin:12px 0 0"><b>'+esc(P)+'으로 예약하시려면</b><p style="margin:6px 0 0">먼저 관리자에게 '+esc(P)+' 연장을 신청하신 뒤 예약하십시오.</p>'+
+        '<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1e8e4e;color:#fff" href="tel:'+PHONE.replace(/-/g,"")+'">관리자에게 전화 ('+PHONE+')</a></div>'+
+      '<div class="card" style="margin:10px 0 0"><b>일반 예약으로 이용하시려면</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p>'+
+        '<div class="ro" style="margin-top:8px">'+esc(PAY_ACCOUNT)+'<br><b>이용료 '+esc(PAY_FEE)+'원</b></div>'+
+        '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 일반 예약하기</button></div>';
+    $("#sheet").prepend(pop);$("#sheet").scrollTop=0;
+    const close=()=>{pop.remove();kids.forEach(k=>k.classList.remove("hidden"))};
+    $("#ppBack").onclick=close;
+    $("#ppGo").onclick=()=>{warnOk=true;close();$("#rGo").click()};
+  };
   $("#rGo").onclick=async()=>{
-    if(busy)return;busy=true;$("#rGo").disabled=true;
+    if(busy)return;
+    if(prodWarn&&!warnOk&&$("#rC").checked){payPop();return} // 동의 전이면 서버의 동의 안내가 먼저
+    busy=true;$("#rGo").disabled=true;
     const name=$("#rName").value,pw=$("#rPw").value;
     const r=await rpc("reserve",{p_date:D,p_hour:h,p_name:name,p_pw:pw,p_consent:$("#rC").checked,p_mode:EXT?"ext":"stu"});
     if(!r.ok){
