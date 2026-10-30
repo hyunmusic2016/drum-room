@@ -149,6 +149,7 @@ div#rBadge:not(:empty){margin-top:6px}
 .mhead b{display:block;font-size:22px;font-weight:900}
 .mhead .bdg{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-top:4px}
 .mhead .badge{margin-left:0}
+.mhead.solo{border-bottom:0;padding-bottom:0;margin-bottom:0}
 .who{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;font-weight:400;margin:0;cursor:pointer}
 .who input{width:20px;height:20px;margin:0;flex:none}
 .mode-box{border:1px solid var(--line);border-radius:12px;padding:6px 12px;margin-top:16px}
@@ -276,7 +277,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.19.4";
+const APP_VERSION="v0.19.5";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -722,10 +723,10 @@ $("#mFind").onclick=async()=>{
   $("#mFind").disabled=false;
   if(!r.ok){mine=null;$("#mBackSlot").innerHTML="";$("#mForm").classList.remove("hidden");$("#mOut").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
   setServerNow(r.now);mine={name,pw,r};
-  let h="";
+  let ph="",h=""; // ph: 위 칸(이름·상품), h: 아래 칸(예약 현황)
   if(r.product){
     const P=r.product,dts=allowedDates(),col=P.target==="ext"?"--ext-text":"--stu-text";
-    h+='<div class="card"><span class="badge '+P.kind+'" style="margin-left:0">'+PROD[P.kind]+'</span>'+
+    ph+='<div class="card"><span class="badge '+P.kind+'" style="margin-left:0">'+PROD[P.kind]+'</span>'+
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+leftText(P)+'</div></div>';
   }
@@ -735,12 +736,14 @@ $("#mFind").onclick=async()=>{
   const hasUp=now.some(x=>x.status==="confirmed");
   // 구분: 등록 이용자면 서버가 준 구분(012), 아니면 상품 대상 → 가장 최근 예약의 구분
   const last=r.list[r.list.length-1],ut=r.user_type||(r.product&&r.product.target)||(last?(last.ext?"ext":"stu"):null);
-  const head='<div class="mhead"><b>'+esc(name.replace(/\s+/g,""))+'</b><div class="bdg">'+
+  const head='<div class="mhead'+(ph?'':' solo')+'"><b>'+esc(name.replace(/\s+/g,""))+'</b><div class="bdg">'+
     (ut?'<span class="badge" style="color:var('+(ut==="ext"?'--ext-text':'--stu-text')+');border-color:currentColor;background:transparent">'+tgtLabel(ut)+'</span>':'')+
     (r.product?'<span class="badge '+r.product.kind+'">'+PROD[r.product.kind]+'</span>':'')+'</div></div>';
   $("#mForm").classList.add("hidden");
   $("#mBackSlot").innerHTML='<button class="btn ghost small" id="mBack">← 다시 조회</button>'; // 제목 "내 예약 확인"과 같은 줄 오른쪽
-  $("#mOut").innerHTML='<div class="card">'+head+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
+  // 위 칸: 이름·구분·상품 / 아래 칸: "예약 현황" 제목 + 예약 목록 + 출입 비밀번호(v0.19.5)
+  $("#mOut").innerHTML='<div class="card">'+head+ph+'</div>'+
+    '<div class="card"><div class="part" style="margin-top:0">예약 현황</div>'+h+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
   $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>openMoveSheet(+b.dataset.m));
