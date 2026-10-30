@@ -518,4 +518,16 @@ select test.ok((public.price_info())->>'fee' = '8000' and (public.price_info())-
 select test.ok((public.pay_info())->>'fee' = '8000' and (public.pay_info())->>'bank' = '신한', '1회 이용료는 계좌 상자에도 반영, 계좌는 그대로');
 reset role;
 
+-- ===== 27. 이용료 마지막 수정 날짜 (023) =====
+reset role; set app.fake_now = '2027-01-05 10:00:00'; set role authenticated;
+select test.ok((public.admin_set_prices('{"fee":"8000","ext_flat":[{"n":"1","price":"100000"},{"n":"2","price":"150000"}],"ext_count":[{"n":"10","price":"60000"}],"stu_flat":[{"n":"1","price":"50000"}]}'))->>'updated_at' = '2027-01-05', '가격 표를 바꿔 저장하면 수정 날짜가 남음');
+reset role; set app.fake_now = '2027-01-09 10:00:00'; set role authenticated;
+select test.ok((public.admin_set_prices('{"fee":"8,000원","ext_flat":[{"n":"1","price":"100,000"},{"n":"2","price":"150000"}],"ext_count":[{"n":"10","price":"60000"}],"stu_flat":[{"n":"1","price":"50,000원"}]}'))->>'updated_at' = '2027-01-05', '바뀐 것 없이 저장하면 날짜 그대로');
+select test.ok((public.admin_set_prices('{"fee":"8000","ext_flat":[{"n":"1","price":"110000"},{"n":"2","price":"150000"}],"ext_count":[{"n":"10","price":"60000"}],"stu_flat":[{"n":"1","price":"50000"}]}'))->>'updated_at' = '2027-01-09', '가격을 바꾸면 날짜가 오늘로');
+reset role; set app.fake_now = '2027-01-10 10:00:00'; set role authenticated;
+select test.ok((public.admin_set_prices('{"fee":"9000","ext_flat":[{"n":"1","price":"110000"},{"n":"2","price":"150000"}],"ext_count":[{"n":"10","price":"60000"}],"stu_flat":[{"n":"1","price":"50000"}]}'))->>'updated_at' = '2027-01-10', '1회 이용료만 바꿔도 날짜가 오늘로');
+set role anon;
+select test.ok((public.price_info())->>'updated_at' = '2027-01-10', '공개 조회에 수정 날짜가 보임');
+reset role; reset app.fake_now;
+
 select '모든 시험 통과' as 결과;
