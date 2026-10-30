@@ -300,4 +300,25 @@ select test.ok((select r->>'ok' = 'true' and r->>'prod' is null from (select pub
 select test.ok((public.reserve('2026-12-22', 18, '만료정액', '3434', true, 'stu'))->>'msg' like '%하루에 한 번%', '만료 뒤 재원생: 하루 1회로 막힘');
 reset role;
 
+-- ===== 16. 만료된 상품과 기간이 겹쳐도 새 상품 추가·수정 가능 (013) =====
+-- 지금 12/22: 만료외부의 횟수권(12/20~12/21)과 만료정액의 정액권(12/20)은 이미 끝남
+set role authenticated;
+select test.ok((public.admin_update_user(jsonb_build_object('id', :x_uid, 'type', 'ext', 'name', '만료외부', 'phone', '01012121212',
+  'new_prod', jsonb_build_object('kind', 'count', 'start', '2026-12-20', 'days', 5, 'total', 3))))->'user'->'current'->>'end' = '2026-12-24',
+  '만료된 횟수권과 겹치는 시작일(12/20)로 새 횟수권 추가 가능');
+select test.ok((public.admin_update_user(jsonb_build_object('id', :x_uid, 'type', 'ext', 'name', '만료외부', 'phone', '01012121212',
+  'edit_prod', jsonb_build_object('start', '2026-12-19', 'days', 4, 'total', 3))))->'user'->'current'->>'end' = '2026-12-22',
+  '사용 중 상품을 만료된 상품 기간까지 당겨 수정 가능');
+select test.ok((public.admin_update_user(jsonb_build_object('id', :f_uid, 'type', 'stu', 'name', '만료정액', 'phone', '01034343434',
+  'new_prod', jsonb_build_object('kind', 'flat', 'start', '2026-12-20', 'days', 4, 'limit', 2))))->>'ok' = 'true',
+  '만료된 정액권과 겹치는 시작일로 새 정액권 추가 가능');
+-- 아직 끝나지 않은 상품끼리 겹치는 것은 계속 막힘
+reset role;
+insert into public.products (user_id, kind, start_date, end_date, daily_limit) values (:f_uid, 'flat', '2026-12-26', '2026-12-27', 1);
+set role authenticated;
+select test.ok((public.admin_update_user(jsonb_build_object('id', :f_uid, 'type', 'stu', 'name', '만료정액', 'phone', '01034343434',
+  'edit_prod', jsonb_build_object('start', '2026-12-22', 'days', 3, 'limit', 1))))->>'msg' like '이 이용자의 다른 상품과 기간이 겹칩니다%',
+  '사용 중인 다른 상품과 겹치면 계속 막힘');
+reset role;
+
 select '모든 시험 통과' as 결과;
