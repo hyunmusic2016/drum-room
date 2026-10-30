@@ -246,7 +246,7 @@ select test.ok(not exists (select 1 from public.products where id = :ext_pid), '
 set role anon;
 select test.ok((public.reserve('2026-10-28', 13, '김외부', '0000', true, 'ext'))->>'msg' like '등록된 외부 이용자%', '사용만료된 외부 이용자는 예약 불가');
 reset role; set role authenticated;
-select test.ok((public.admin_set_status(:ext_uid, 'blacklisted'))->>'ok' = 'false', '블랙리스트는 아직 받지 않음');
+select test.ok((public.admin_set_status(:ext_uid, 'blacklisted'))->'user'->>'status' = 'blacklisted', '블랙리스트 등록(015, 사용만료 상태에서도 가능)');
 select test.ok((public.admin_set_status(:ext_uid, 'active'))->'user'->>'status' = 'active', '다시 사용');
 
 -- ===== 14. 30일 뒤 정리 (009) =====
@@ -361,6 +361,49 @@ select test.ok(public.user_last_used(:d_uid) = '2026-11-01', '지워진 예약�
 select test.ok(not public.user_dormant(:d_uid), '11/1 이용 → 12/22엔 51일이라 휴면 아님');
 set role anon;
 select test.denied($$select public.user_dormant(1)$$, '익명은 휴면 함수를 직접 부를 수 없음');
+reset role;
+
+-- ===== 18. 블랙리스트(외부 이용자만, 015) =====
+-- 지금 12/22. 만료외부(외부, 횟수권 12/19~12/22 남음 2회 이상)로 시험
+set role anon;
+select (public.reserve('2026-12-23', 10, '만료외부', '1212', true, 'ext'))->>'id' as bl_rid \gset
+reset role; set role authenticated;
+select test.ok((public.admin_set_status(:f_uid, 'blacklisted'))->>'msg' like '블랙리스트는 외부 이용자만%', '재원생은 블랙리스트 등록 불가');
+select test.ok(((public.admin_set_status(:x_uid, 'blacklisted'))->>'cancelled')::int >= 1, '블랙리스트 등록 → 앞으로의 확정 예약 자동 취소');
+reset role;
+select test.ok(not exists (select 1 from public.reservations where user_id = :x_uid and status = 'confirmed' and not public.slot_ended(date, hour)),
+               '그 이용자의 끝나지 않은 확정 예약이 남지 않음');
+set role authenticated;
+reset role;
+select test.ok((select cancel_reason from public.reservations where id = :bl_rid) = '관리자 취소: 이용 제한', '취소 사유: 관리자 취소: 이용 제한');
+select test.ok(exists (select 1 from public.products where user_id = :x_uid and end_date >= '2026-12-22'), '정액권·횟수권은 그대로 남음');
+set role authenticated;
+select test.ok((public.admin_set_status(:x_uid, 'blacklisted'))->>'msg' like '이미 블랙리스트%', '두 번 등록 안 됨');
+select test.ok((public.admin_user(:x_uid))->'user'->>'status' = 'blacklisted', '이용자 정보에 상태 blacklisted');
+set role anon;
+select test.ok((public.reserve('2026-12-23', 11, '만료외부', '1212', true, 'ext'))->>'msg' = '현재 예약이 제한되어 있습니다. 관리자에게 문의하십시오.', '블랙리스트 외부 이용자 예약 → 제한 안내');
+select test.ok((public.reserve('2026-12-23', 11, '만료외부', '9999', true, 'ext'))->>'msg' like '등록된 외부 이용자 정보와 일치하지 않습니다%', '비밀번호가 틀리면 블랙리스트 여부를 알려 주지 않음');
+select test.ok((public.my_reservations('만료외부', '1212'))->>'ok' = 'true', '블랙리스트여도 내 예약 조회는 가능(취소 사유 확인)');
+reset role; set role authenticated;
+select test.ok(exists (select 1 from jsonb_array_elements((public.admin_find_users('만료외부', '2026-12-23'))->'users') e where e->>'status' = 'blacklisted'),
+               '관리자 예약 이름 찾기에 블랙리스트 표시');
+select test.ok((public.admin_reserve('2026-12-23', 12, '만료외부', :x_uid, null, false))->>'msg' like '블랙리스트 이용자입니다%', '관리자 일반예약은 막힘');
+select test.ok((public.admin_reserve('2026-12-23', 12, '만료외부', :x_uid, null, true))->>'ok' = 'true', '관리자 슈퍼패스는 허용');
+select test.ok((public.admin_update_user(jsonb_build_object('id', :x_uid, 'type', 'ext', 'name', '만료외부', 'phone', '01012121212', 'memo', '시험 사유')))->>'ok' = 'true',
+               '블랙리스트 이용자도 메모 수정 가능');
+reset role;
+select test.ok((select count(*) from public.users where id = :x_uid and type = 'ext') = 1, '구분은 외부 그대로');
+do $$ begin
+  update public.users set type = 'stu' where name = '만료외부';
+  raise exception '실패: 블랙리스트 이용자를 재원생으로 바꿀 수 있음';
+exception when others then
+  if sqlerrm like '실패:%' then raise; end if;
+  raise notice '통과: 블랙리스트인 동안 재원생으로 바꿀 수 없음';
+end $$;
+set role authenticated;
+select test.ok((public.admin_set_status(:x_uid, 'active'))->'user'->>'status' = 'active', '블랙리스트 복귀');
+set role anon;
+select test.ok((public.reserve('2026-12-23', 13, '만료외부', '1212', true, 'ext'))->>'ok' = 'true', '복귀 뒤 다시 예약 가능(남은 횟수권 사용)');
 reset role;
 
 select '모든 시험 통과' as 결과;
