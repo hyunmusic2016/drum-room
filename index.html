@@ -110,6 +110,7 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 .msg{padding:10px 12px;border-radius:8px;margin:10px 0;font-size:14px}
 .msg.err{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
 .msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.msg.warn{background:color-mix(in srgb,var(--flat) 14%,transparent);color:var(--flat);font-weight:600} /* 상품 기간이 끝난 날짜 예약 안내(v0.21.15) */
 .check{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:13px;font-weight:400}
 .check input{width:22px;height:22px;margin:0;flex:none}
 /* 제목 줄 오른쪽 작은 버튼: 예약 화면에서는 "내 예약", 그 밖의 화면에서는 "예약하기" */
@@ -290,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.14";
+const APP_VERSION="v0.21.15";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -467,16 +468,24 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
   if(EXT)$("#firstGo").onclick=()=>openFirstGuide(h);
   /* 이름과 비밀번호가 모두 맞을 때만 서버가 상품 정보를 줍니다(결정 사항 2). 입력이 멈추면 한 번 물어봅니다. */
   let bt=null,bseq=0;
+  let prodWarn=""; // 이 날짜가 상품 기간 뒤면 안내 문구(완료 화면에도 다시 보여 줌)
   const badge=()=>{
-    clearTimeout(bt);$("#rBadge").innerHTML="";
+    clearTimeout(bt);$("#rBadge").innerHTML="";prodWarn="";
     const n=$("#rName").value.trim(),pw=$("#rPw").value;
     if(!n||!/^\d{4}$/.test(pw))return;
     const my=++bseq;
     bt=setTimeout(async()=>{
       const r=await rpc("product_info",{p_mode:EXT?"ext":"stu",p_name:n,p_pw:pw});
       if(my!==bseq||!r||!r.product||!$("#rBadge"))return;
-      const p=r.product;if(!(p.start<=D&&D<=p.end))return;
+      const p=r.product;
       const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
+      if(D>p.end){ // 상품이 이 날짜 전에 끝남 → 상품이 아닌 일반 예약으로 잡힌다고 미리 알림(v0.21.15)
+        const day=D===allowedDates()[0]?"오늘":"내일",P=PROD[p.kind];
+        prodWarn=P+" 기간("+sh(p.end)+"까지)이 지나 "+day+" 예약은 "+P+"이 아닌 일반 예약"+(p.kind==="flat"&&!EXT?"(하루 1회)":"")+"으로 잡힙니다.";
+        $("#rBadge").innerHTML='<div class="msg warn" style="margin:6px 0 0">⚠ '+esc(prodWarn)+(p.kind==="count"?" 횟수권 횟수는 쓰지 않습니다.":"")+' 계속 '+P+'으로 이용하시려면 관리자에게 문의하십시오.</div>';
+        return;
+      }
+      if(!(p.start<=D&&D<=p.end))return;
       const remain=p.kind==="count"?prodLeftText(p,D):(D===allowedDates()[0]?"오늘":"내일")+" 이용 "+prodLeftText(p,D);
       $("#rBadge").innerHTML='<i class="badge '+p.kind+'">'+PROD[p.kind]+'</i><b style="font-size:13px;margin-left:6px;color:var('+(EXT?'--ext-text':'--stu-text')+')">'+remain+'</b><span style="font-weight:400;font-size:12px;color:var(--sub);margin-left:6px">'+sh(p.start)+' ~ '+sh(p.end)+' · '+leftText(p)+'</span>';
     },350);
@@ -495,7 +504,8 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       return;
     }
     const kind=doneKind(r.ext);
-    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,'<div id="codesBox"></div>'+DONE_NOTE);
+    const warn=!r.prod&&prodWarn?'<div class="msg warn" style="text-align:left">⚠ '+esc(prodWarn.replace(/잡힙니다\.$/,"확정되었습니다."))+'</div>':"";
+    $("#sheet").innerHTML=doneHtml("예약이 확정되었습니다",r.name,r.prod,r.date,r.hour,warn+'<div id="codesBox"></div>'+DONE_NOTE);
     burst(kind);$("#ok").onclick=closeSheet;
     showCodes("#codesBox",name,pw);
     selHour=null;curDate=allowedDates()[0];refreshBook();autoHome();
