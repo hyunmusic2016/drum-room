@@ -427,4 +427,17 @@ select test.denied($$select public.admin_set_black_reason(1, 'x')$$, '익명은 
 select test.ok((public.my_reservations('만료외부', '1212'))::text not like '%black%', '공개 내 예약 응답에는 블랙리스트 정보가 없음');
 reset role;
 
+-- ===== 20. 상품 없는(일반) 외부 이용자도 블랙리스트 (2026-10-30 확인) =====
+set role authenticated;
+select test.ok((public.admin_user(:d_uid))->'user'->'current' = 'null'::jsonb, '휴면외부는 상품 없는 일반 외부 이용자');
+select test.ok((public.admin_set_status(:d_uid, 'blacklisted', '시험'))->'user'->>'status' = 'blacklisted', '일반 외부 이용자 블랙리스트 등록');
+set role anon;
+select test.ok((public.reserve('2026-12-23', 14, '휴면외부', '5656', true, 'ext'))->>'msg' = '현재 예약이 제한되어 있습니다. 관리자에게 문의하십시오.', '일반 외부 이용자도 예약 제한 안내');
+reset role; set role authenticated;
+select test.ok((public.admin_reserve('2026-12-23', 14, '휴면외부', :d_uid, null, false))->>'msg' like '블랙리스트 이용자입니다%', '일반 외부 이용자도 관리자 일반예약 막힘');
+select test.ok((public.admin_set_status(:d_uid, 'active'))->'user'->>'black_count' = '1', '복귀하면 이력 1회');
+set role anon;
+select test.ok((public.reserve('2026-12-23', 14, '휴면외부', '5656', true, 'ext'))->>'ok' = 'true', '복귀 뒤 일반 외부 이용자 예약 가능');
+reset role;
+
 select '모든 시험 통과' as 결과;
