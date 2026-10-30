@@ -277,7 +277,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.19.5";
+const APP_VERSION="v0.20.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -941,15 +941,15 @@ function bindUser(){
    상품 칸은 상품 등록 순, 일반 칸은 이용자 등록 순으로 최근이 위. 사용만료·블랙리스트 이용자는 여기 보이지 않습니다. */
 function statusGroups(){
   const g={flat:[],count:[],none:[]};
-  A.users.filter(u=>u.status==="active").forEach(u=>{if(u.current)g[u.current.kind].push(u);else g.none.push(u)});
+  A.users.filter(u=>u.status==="active"&&!u.dormant).forEach(u=>{if(u.current)g[u.current.kind].push(u);else g.none.push(u)});
   g.flat.sort((a,b)=>b.current.id-a.current.id);g.count.sort((a,b)=>b.current.id-a.current.id);g.none.sort((a,b)=>b.id-a.id);
   return g;
 }
-function statusItem(u,kind){
+function statusItem(u,kind,extra){
   const col=u.type==="ext"?'--ext-text':'--stu-text',q=kind==="none"?u.last:u.current;
   const line=kind==="none"?(q?'<div class="hint">만료된 '+PROD[q.kind]+': '+q.end+' 종료</div>':''):'<div class="hint">'+prodLine(q)+'</div>';
   return '<div class="item uitem" data-sv="'+u.id+'" data-n="'+esc(normName(u.name))+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+(kind!=="none"?'<span class="badge '+q.kind+'">'+PROD[q.kind]+'</span>':'')+
-    '<div class="hint">'+esc(u.phone||"전화번호 없음")+(u.part?' · '+esc(u.part):'')+'</div>'+(u.memo?'<div class="hint">'+esc(u.memo)+'</div>':'')+line+'</div>'+
+    '<div class="hint">'+esc(u.phone||"전화번호 없음")+(u.part?' · '+esc(u.part):'')+'</div>'+(u.memo?'<div class="hint">'+esc(u.memo)+'</div>':'')+line+(extra||'')+'</div>'+
     '<div style="display:flex;gap:6px;flex:none;align-items:center"><button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+u.id+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
 /* 이용자 현황(v0.19.3): 정액권·횟수권·일반을 각각 접기·펼치기(처음엔 접힘), 맨 위 이름 검색 + [전부 펼치기]/[전부 접기].
@@ -976,6 +976,39 @@ function applyStatusQ(){
   statusAllBtn();
 }
 function statusAllBtn(){const gs=[...document.querySelectorAll("#sec-block .sgrp")].filter(g=>!g.classList.contains("hidden"));$("#qUserAll").textContent=gs.length&&gs.every(g=>g.open)?"전부 접기":"전부 펼치기"}
+/* 설정 > 휴면 이용자(v0.20.0): 마지막 이용일로부터 90일 이상 지났고 사용 중인 정액권·횟수권이 없는 이용자(서버가 dormant로 알려 줌).
+   마지막 이용일이 최근인 사람(최근에 휴면이 된 사람)이 맨 위. 다시 예약하면 서버 계산이 바뀌어 자동으로 이용자 현황으로 돌아갑니다. */
+const DORMANT_DAYS=90;let dmQ="";
+const daysAgo=d=>{const [y,m,dd]=d.split("-").map(Number),[ty,tm,td]=seoulDate().split("-").map(Number);return Math.round((Date.UTC(ty,tm-1,td)-Date.UTC(y,m-1,dd))/864e5)};
+function dormantUsers(){return A.users.filter(u=>u.status==="active"&&u.dormant).sort((a,b)=>(b.last_used||"").localeCompare(a.last_used||"")||b.id-a.id)}
+function dormantHtml(){
+  const us=dormantUsers();
+  return '<p class="hint" style="margin:0 0 8px">마지막 이용일로부터 '+DORMANT_DAYS+'일 이상 지났고 사용 중인 정액권·횟수권이 없는 이용자입니다. 다시 예약하면 이용자 현황으로 자동으로 돌아갑니다.</p>'+
+    '<div class="hrow"><input type="search" class="hsearch" id="qDorm" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(dmQ)+'"></div>'+
+    '<p class="hint hidden" id="qDormNone">찾는 이름의 이용자가 없습니다.</p>'+
+    '<div class="card" id="dormList"><div class="part" style="margin-top:0">휴면 이용자<small class="cnt">'+us.length+'명</small></div>'+
+    (us.length?us.map(u=>statusItem(u,"none",'<div class="hint">마지막 이용: '+esc(u.last_used||"")+(u.last_used?' ('+daysAgo(u.last_used)+'일 전)':'')+'</div>')).join(""):'<p class="hint">휴면 이용자가 없습니다.</p>')+'</div>';
+}
+function applyDormQ(){
+  const q=normName(dmQ);let n=0;
+  document.querySelectorAll("#dormList .uitem").forEach(r=>{const hit=!q||r.dataset.n.includes(q);r.classList.toggle("hidden",!hit);if(hit)n++});
+  const c=$("#dormList .cnt");if(c)c.textContent=n+"명";
+  $("#qDormNone").classList.toggle("hidden",!q||n>0);
+}
+function bindDormant(){
+  $("#qDorm").oninput=()=>{dmQ=$("#qDorm").value;applyDormQ()};
+  applyDormQ();bindUserRows();
+}
+function bindUserRows(){
+  document.querySelectorAll("[data-sv]").forEach(el=>{
+    const open=()=>{viewUser=+el.dataset.sv;uFlash="";A.detail=null;renderAdmin();reloadAdmin()};
+    el.onclick=open;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};
+  });
+  document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); // 통화 버튼은 정보 화면으로 들어가지 않음
+    callUser(A.users.find(u=>u.id===+b.dataset.sc));
+  });
+}
 function bindStatus(){
   $("#qUser").oninput=()=>{stQ=$("#qUser").value;applyStatusQ()};
   document.querySelectorAll("#sec-block .sgrp").forEach(g=>{
@@ -988,15 +1021,7 @@ function bindStatus(){
     gs.forEach(g=>{g.open=open;if(!stQ.trim()){if(open)stOpen.add(g.dataset.k);else stOpen.delete(g.dataset.k)}});
     statusAllBtn();
   };
-  applyStatusQ();
-  document.querySelectorAll("[data-sv]").forEach(el=>{
-    const open=()=>{viewUser=+el.dataset.sv;uFlash="";A.detail=null;renderAdmin();reloadAdmin()};
-    el.onclick=open;el.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open()}};
-  });
-  document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=e=>{
-    e.stopPropagation(); // 통화 버튼은 정보 화면으로 들어가지 않음
-    callUser(A.users.find(u=>u.id===+b.dataset.sc));
-  });
+  applyStatusQ();bindUserRows();
 }
 /* 이용자 정보(읽기 전용): 수정 화면과 같은 배치 + 현재 정액권·횟수권 + [수정] */
 function userViewHtml(){
@@ -1172,22 +1197,23 @@ function bindBlock2(){
 /* ===== 설정 화면 ===== */
 function settingsHtml(){
   // 큰 제목과 [← 뒤로]를 한 줄에(v0.18.11, 뒤로 버튼은 오른쪽)
-  const title=setPage==="status"?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":"이용자 현황"):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경"}[setPage];
-  const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(setPage==="status"&&editUser!==null?'← 이용자 정보':setPage==="status"&&viewUser!==null?'← 이용자 현황':'← 설정')+'</button></div>';
-  if(setPage==="status"){
+  const UP=setPage==="status"||setPage==="dormant",LN=setPage==="dormant"?"휴면 이용자":"이용자 현황";
+  const title=UP?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":LN):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경"}[setPage];
+  const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(UP&&editUser!==null?'← 이용자 정보':UP&&viewUser!==null?'← '+LN:'← 설정')+'</button></div>';
+  if(UP){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
-    return back+(editUser!==null?userEditHtml():viewUser!==null?userViewHtml():statusHtml());
+    return back+(editUser!==null?userEditHtml():viewUser!==null?userViewHtml():setPage==="dormant"?dormantHtml():statusHtml());
   }
   if(setPage==="block")return back+blockHtml2();
   if(setPage==="pw")return back+setHtml();
   if(setPage==="door")return back+doorHtml();
   const mi=(k,l)=>'<div class="item"><button data-sp="'+k+'" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">'+l+'</button></div>';
-  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
+  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("dormant","휴면 이용자 (90일 이상)")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
 }
 function bindSettings(){
   document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="door")reloadAdmin()});
   const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else if(viewUser!==null){viewUser=null;A.detail=null}else{setPage=null}uFlash="";renderAdmin()};
-  if(setPage==="status"){if(editUser!==null&&A.detail)bindUserEdit();else if(viewUser!==null&&A.detail)bindUserView();else if(viewUser===null)bindStatus()}
+  if(setPage==="status"||setPage==="dormant"){if(editUser!==null&&A.detail)bindUserEdit();else if(viewUser!==null&&A.detail)bindUserView();else if(viewUser===null)(setPage==="dormant"?bindDormant():bindStatus())}
   if(setPage==="block")bindBlock2();
   if(setPage==="pw")bindSet();
   if(setPage==="door")bindDoor();
@@ -1271,7 +1297,7 @@ function renderAdmin(){
   const ok=A.res.filter(r=>r.status==="confirmed"),up=ok.filter(r=>!r.ended),past=ok.filter(r=>r.ended).reverse(),
         canc=A.res.filter(r=>r.status==="cancelled").reverse();
   const wasOpen=id=>{const d=document.getElementById(id);return d&&d.open?" open":""}; // 자동 새로고침 때 펼친 상태 유지
-  const fo=document.activeElement&&(histQ.hasOwnProperty(document.activeElement.id)||document.activeElement.id==="qUser")?document.activeElement.id:null; // 검색 칸에 입력 중이었으면 다시 커서를 둡니다
+  const fo=document.activeElement&&(histQ.hasOwnProperty(document.activeElement.id)||document.activeElement.id==="qUser"||document.activeElement.id==="qDorm")?document.activeElement.id:null; // 검색 칸에 입력 중이었으면 다시 커서를 둡니다
   $("#adminPane").innerHTML=
    '<div class="tabs" id="aTabs">'+tabBtns()+'</div>'+(A.err?'<div class="msg err">'+esc(A.err)+'</div>':'')+
    '<div id="sec-list"><div class="card"><div class="row"><b>예약 목록 (본명 표시)</b></div><div class="tbl">'+

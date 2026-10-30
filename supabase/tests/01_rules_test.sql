@@ -321,4 +321,46 @@ select test.ok((public.admin_update_user(jsonb_build_object('id', :f_uid, 'type'
   '사용 중인 다른 상품과 겹치면 계속 막힘');
 reset role;
 
+-- ===== 17. 휴면 이용자(90일 이상 이용 없음, 014) =====
+-- 지금 12/22. 마지막 이용일 = 확정 예약의 이용 날짜 중 가장 늦은 날(취소 제외), 없으면 등록일
+set role authenticated;
+select test.ok((public.admin_create_user('{"type":"ext","name":"휴면외부","pw":"5656","phone":"01056565656"}'))->>'ok' = 'true', '휴면 시험: 외부 이용자 등록');
+select test.ok((public.admin_create_user('{"type":"ext","name":"휴면상품","pw":"7878","phone":"01078787878",
+  "prod":{"kind":"count","start":"2026-12-22","days":30,"total":5}}'))->>'ok' = 'true', '휴면 시험: 횟수권 있는 외부 이용자 등록');
+reset role;
+select id as d_uid from public.users where name = '휴면외부' \gset
+select id as dp_uid from public.users where name = '휴면상품' \gset
+update public.users set created_at = '2026-09-23 12:00+09' where id = :d_uid;   -- 12/22 기준 90일 전
+update public.users set created_at = '2026-09-01 12:00+09' where id = :dp_uid;
+set role authenticated;
+select test.ok((public.admin_user(:d_uid))->'user'->>'last_used' = '2026-09-23', '예약이 없으면 마지막 이용일 = 등록일');
+select test.ok((public.admin_user(:d_uid))->'user'->>'dormant' = 'true', '마지막 이용일로부터 90일 → 휴면');
+reset role; update public.users set created_at = '2026-09-24 12:00+09' where id = :d_uid; set role authenticated;
+select test.ok((public.admin_user(:d_uid))->'user'->>'dormant' = 'false', '89일이면 아직 휴면 아님');
+reset role; update public.users set created_at = '2026-09-01 12:00+09' where id = :d_uid; set role authenticated;
+select test.ok((public.admin_user(:dp_uid))->'user'->>'dormant' = 'false', '사용 중인 횟수권이 있으면 오래돼도 휴면 아님');
+select test.ok(exists (select 1 from jsonb_array_elements((public.admin_users())->'users') e
+                 where (e->>'id')::bigint = :d_uid and e->>'dormant' = 'true'), '이용자 목록(admin_users)에도 휴면 표시');
+-- 다시 예약하면 자동으로 휴면이 풀림
+set role anon;
+select (public.reserve('2026-12-23', 9, '휴면외부', '5656', true, 'ext'))->>'id' as d_rid \gset
+reset role; set role authenticated;
+select test.ok((public.admin_user(:d_uid))->'user'->>'dormant' = 'false', '휴면 이용자가 예약하면 바로 휴면 풀림');
+select test.ok((public.admin_user(:d_uid))->'user'->>'last_used' = '2026-12-23', '마지막 이용일 = 예약한 이용 날짜');
+-- 그 예약을 취소하면 이용으로 세지 않음
+set role anon;
+select test.ok((public.cancel_own(:d_rid, '휴면외부', '5656'))->>'ok' = 'true', '휴면 시험 예약 본인 취소');
+reset role; set role authenticated;
+select test.ok((public.admin_user(:d_uid))->'user'->>'dormant' = 'true', '취소한 예약은 이용으로 세지 않음 → 다시 휴면');
+-- 30일 지난 예약이 지워져도 마지막 이용일은 남음
+reset role;
+insert into public.reservations (date, hour, name, pw_hash, user_id, is_ext) values ('2026-11-01', 9, '휴면외부', null, :d_uid, true);
+select test.ok((public.cleanup_old())->>'ok' = 'true', '정리 함수 실행(11/22 전 예약 삭제)');
+select test.ok(not exists (select 1 from public.reservations where user_id = :d_uid and date = '2026-11-01'), '11/1 예약은 지워짐');
+select test.ok(public.user_last_used(:d_uid) = '2026-11-01', '지워진 예약의 이용 날짜가 마지막 이용일로 남음');
+select test.ok(not public.user_dormant(:d_uid), '11/1 이용 → 12/22엔 51일이라 휴면 아님');
+set role anon;
+select test.denied($$select public.user_dormant(1)$$, '익명은 휴면 함수를 직접 부를 수 없음');
+reset role;
+
 select '모든 시험 통과' as 결과;
