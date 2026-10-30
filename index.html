@@ -291,15 +291,27 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.19";
+const APP_VERSION="v0.22.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
 const SUPABASE_KEY="sb_publishable_EuDlhpMAm69J4qB0pMFVYA_bh5RWzo2";
 const DAYS_KO=["일","월","화","수","목","금","토"];
 const PHONE="010-7753-8730";
-// 상품 기간이 끝난 날짜를 일반 예약할 때 안내하는 입금 계좌·이용료(v0.21.16). ※ 정식 오픈 전 실제 값으로 바꿀 것(CLAUDE.md 남은 일)
-const PAY_ACCOUNT="계좌번호 입력 예정",PAY_FEE="0000";
+// 입금 계좌(은행명·예금주·계좌번호·일반 이용료)는 서버에 저장하고 관리자 > 설정 > 입금 계좌 변경에서 바꿉니다(v0.22.0, 서버 018).
+// 계좌가 보이는 화면은 열 때마다 서버(pay_info)에서 새로 받아 오므로, 저장하면 곳곳에 바로 반영됩니다.
+function payBoxHtml(pi){ // 계좌 상자(계좌번호 복사 버튼 포함). pi: pay_info 응답
+  if(!pi||!pi.ok)return '<div class="ro" style="margin-top:8px">'+esc(NET_MSG)+'</div>';
+  if(!pi.number)return '<div class="ro" style="margin-top:8px">입금 계좌가 아직 등록되지 않았습니다. 관리자에게 문의하십시오.</div>';
+  return '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(pi.bank)+' <b style="white-space:nowrap">'+esc(pi.number)+'</b><br>예금주 '+esc(pi.holder)+
+    (pi.fee?'<br><b>이용료 '+Number(pi.fee).toLocaleString("ko-KR")+'원</b>':'<br>이용료는 관리자에게 문의하십시오.')+'</div>'+
+    '<button type="button" class="btn ghost small" data-copyacc="'+esc(pi.number)+'" style="flex:none;margin:0">계좌번호 복사</button></div>';
+}
+function bindPayCopy(root){ // 계좌번호(숫자와 -)만 복사, 2초 동안 "복사했습니다"
+  (root||document).querySelectorAll("[data-copyacc]").forEach(b=>b.onclick=async()=>{
+    const ok=await copyText(b.dataset.copyacc);b.textContent=ok?"복사했습니다":"복사 실패";setTimeout(()=>{b.textContent="계좌번호 복사"},2000);
+  });
+}
 const EXPIRED_INFO_DAYS=7; // 정액권·횟수권이 끝난 뒤 며칠 동안 위 안내를 보여 줄지(서버 017도 7일)
 const CONTACT_HOURS="매일 오전 9시 ~ 밤 10시"; // 문의 가능 시간(학원 운영에 맞게 수정)
 const PROD={flat:"정액권",count:"횟수권"};
@@ -505,14 +517,13 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       '<div class="card" style="margin:12px 0 0"><b>'+esc(P)+'으로 예약하시려면</b><p style="margin:6px 0 0">먼저 관리자에게 '+esc(P)+' 연장을 신청하신 뒤 예약하십시오.</p>'+
         '<a class="btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#1e8e4e;color:#fff" href="tel:'+PHONE.replace(/-/g,"")+'">관리자에게 전화 ('+PHONE+')</a></div>'+
       '<div class="card" style="margin:10px 0 0"><b>일반 예약으로 이용하시려면</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p>'+
-        '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(PAY_ACCOUNT)+'<br><b>이용료 '+esc(PAY_FEE)+'원</b></div>'+
-        '<button type="button" class="btn ghost small" id="ppCopy" style="flex:none;margin:0">계좌번호 복사</button></div>'+
+        '<div id="ppPay"><div class="ro" style="margin-top:8px">불러오는 중입니다…</div></div>'+
         '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 일반 예약하기</button></div>'+
       '<p class="hint" style="margin-top:10px;text-align:center">이 안내는 '+esc(P)+' 사용이 끝난 날부터 '+EXPIRED_INFO_DAYS+'일 동안 보입니다.</p>';
     $("#sheet").prepend(pop);$("#sheet").scrollTop=0;
     const close=()=>{pop.remove();kids.forEach(k=>k.classList.remove("hidden"))};
     $("#ppBack").onclick=close;
-    $("#ppCopy").onclick=async()=>{/* 은행 앱에 붙여 넣기 쉽게 숫자 부분(계좌번호)만 복사 */const ok=await copyText((PAY_ACCOUNT.match(/\d[\d-]{5,}\d/)||[PAY_ACCOUNT])[0]);$("#ppCopy").textContent=ok?"복사했습니다":"복사 실패";setTimeout(()=>{if($("#ppCopy"))$("#ppCopy").textContent="계좌번호 복사"},2000)};
+    rpc("pay_info").then(pi=>{if($("#ppPay")){$("#ppPay").innerHTML=payBoxHtml(pi);bindPayCopy($("#ppPay"))}}); // 열 때마다 새로 받아 옴
     $("#ppGo").onclick=()=>{warnOk=true;close();$("#rGo").click()};
   };
   $("#rGo").onclick=async()=>{
@@ -884,6 +895,7 @@ async function reloadOnce(){
   if(setPage==="block"){const b=await rpc("admin_blocks");A.blocks=b.ok?b.list:[]}
   if(adminTab==="proxy")await loadBoard();
   if(setPage==="door"){const c=await rpc("admin_door_codes");A.codes=c.ok?c.codes:null}
+  if(setPage==="pay"){const c=await rpc("pay_info");A.pay=c.ok?c:null}
   A.loaded=true;
   if(adminOn)renderAdmin();
 }
@@ -1242,6 +1254,29 @@ function doorHtml(){
     DOOR_LABELS.map(([k,l])=>'<label for="d_'+k+'">'+l+' 비밀번호</label><input type="text" id="d_'+k+'" maxlength="20" autocomplete="off" value="'+esc(A.codes[k]||"")+'">').join("")+
     '<div id="dMsg"></div><button class="btn" id="dGo">저장</button></div>';
 }
+/* 설정 > 입금 계좌 변경(v0.22.0): 저장하면 계좌가 보이는 화면에 바로 반영 */
+function payHtml(){
+  if(!A.pay)return '<p class="hint">불러오는 중입니다…</p>';
+  const f=(k,l,ph,extra)=>'<label for="pa_'+k+'">'+l+'</label><input type="text" id="pa_'+k+'" autocomplete="off" placeholder="'+ph+'"'+(extra||'')+' value="'+esc(A.pay[k]||"")+'">';
+  return '<div class="card"><p class="hint" style="margin-top:0">상품(정액권·횟수권) 기간이 끝난 날짜를 예약할 때 나오는 안내 창 등 계좌가 보이는 곳에 쓰입니다. 저장하면 바로 바뀝니다.</p>'+
+    '<div class="cols c2"><div>'+f("bank","은행명","예: 농협",' maxlength="20"')+'</div><div>'+f("holder","예금주","예: 현실용음악학원",' maxlength="20"')+'</div></div>'+
+    f("number","계좌번호","예: 123-4567-8901-23",' maxlength="30" inputmode="numeric"')+
+    f("fee","일반 이용료 (원, 비워 둘 수 있음)","예: 5000",' maxlength="9" inputmode="numeric"')+
+    '<div id="paMsg"></div><button class="btn" id="paGo">저장</button></div>'+
+    '<div class="card"><div class="part" style="margin-top:0">화면에 보이는 모습</div><div id="paPrev">'+payBoxHtml(A.pay)+'</div></div>';
+}
+function bindPay(){
+  if(!$("#paGo"))return;bindPayCopy($("#paPrev"));
+  $("#paGo").onclick=async()=>{
+    const p={};["bank","holder","number","fee"].forEach(k=>p[k]=$("#pa_"+k).value);
+    $("#paGo").disabled=true;const r=await rpc("admin_set_pay",{p});if($("#paGo"))$("#paGo").disabled=false;
+    if(r.auth){adminExpired();return}
+    if(!r.ok){$("#paMsg").innerHTML='<div class="msg err">'+esc(r.msg)+'</div>';return}
+    A.pay=r;["bank","holder","number","fee"].forEach(k=>$("#pa_"+k).value=r[k]);
+    $("#paPrev").innerHTML=payBoxHtml(r);bindPayCopy($("#paPrev"));
+    $("#paMsg").innerHTML='<div class="msg ok">입금 계좌를 저장하였습니다.</div>';
+  };
+}
 function bindDoor(){
   if(!$("#dGo"))return;
   $("#dGo").onclick=async()=>{
@@ -1323,7 +1358,7 @@ function bindBlock2(){
 function settingsHtml(){
   // 큰 제목과 [← 뒤로]를 한 줄에(v0.18.11, 뒤로 버튼은 오른쪽)
   const UP=setPage==="status"||setPage==="dormant"||setPage==="black",LN={dormant:"휴면 이용자",black:"블랙리스트"}[setPage]||"이용자 현황";
-  const title=UP?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":LN):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경"}[setPage];
+  const title=UP?(editUser!==null?"이용자 수정":viewUser!==null?"이용자 정보":LN):{block:"이용 불가 시간 설정",pw:"관리자 비밀번호 변경",door:"출입 비밀번호 변경",pay:"입금 계좌 변경"}[setPage];
   const back='<div class="titlerow"><h2>'+title+'</h2><button class="btn ghost small" id="setBack">'+(UP&&editUser!==null?'← 이용자 정보':UP&&viewUser!==null?'← '+LN:'← 설정')+'</button></div>';
   if(UP){
     if(viewUser!==null&&!A.detail)return back+'<p class="hint">불러오는 중입니다…</p>';
@@ -1332,16 +1367,18 @@ function settingsHtml(){
   if(setPage==="block")return back+blockHtml2();
   if(setPage==="pw")return back+setHtml();
   if(setPage==="door")return back+doorHtml();
+  if(setPage==="pay")return back+payHtml();
   const mi=(k,l)=>'<div class="item"><button data-sp="'+k+'" style="width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:12px 0;min-height:48px;cursor:pointer">'+l+'</button></div>';
-  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("dormant","휴면 이용자 (90일 이상)")+mi("black","블랙리스트")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
+  return '<div class="card"><b>설정</b>'+mi("status","이용자 현황")+mi("dormant","휴면 이용자 (90일 이상)")+mi("black","블랙리스트")+mi("block","이용 불가 시간 설정")+mi("door","출입 비밀번호 변경")+mi("pay","입금 계좌 변경")+mi("pw","관리자 비밀번호 변경")+'</div>';
 }
 function bindSettings(){
-  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="door")reloadAdmin()});
+  document.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>{setPage=b.dataset.sp;renderAdmin();if(setPage==="block"||setPage==="door"||setPage==="pay")reloadAdmin()});
   const back=$("#setBack");if(back)back.onclick=()=>{if(editUser!==null){editUser=null}else if(viewUser!==null){viewUser=null;A.detail=null}else{setPage=null}uFlash="";renderAdmin()};
   if(setPage==="status"||setPage==="dormant"||setPage==="black"){if(editUser!==null&&A.detail)bindUserEdit();else if(viewUser!==null&&A.detail)bindUserView();else if(viewUser===null)(setPage==="dormant"?bindDormant():setPage==="black"?bindBlack():bindStatus())}
   if(setPage==="block")bindBlock2();
   if(setPage==="pw")bindSet();
   if(setPage==="door")bindDoor();
+  if(setPage==="pay")bindPay();
 }
 function tabBtns(){return [["list","예약 목록"],["ext","이용자 등록"],["proxy","관리자 예약"],["block","설정"]].map(([k,l])=>'<button class="tab" data-at="'+k+'" aria-selected="'+(adminTab===k)+'">'+l+'</button>').join("")}
 function applyAdminTab(){

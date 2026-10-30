@@ -464,4 +464,16 @@ select test.ok((public.product_info('ext', '칠일시험', '4545'))->'product'->
 select test.ok((public.reserve('2026-12-23', 15, '칠일시험', '4545', true, 'ext'))->>'prod' = 'count', '사용 중 상품으로 예약됨');
 reset role;
 
+-- ===== 22. 입금 계좌 (018) =====
+set role anon;
+select test.ok((public.pay_info())->>'number' = '', '처음엔 입금 계좌가 비어 있음');
+select test.denied($$select public.admin_set_pay('{}')$$, '익명은 입금 계좌를 바꿀 수 없음');
+reset role; set role authenticated;
+select test.ok((public.admin_set_pay('{"bank":"농협","holder":"현실용음악학원","number":"12a-34","fee":"5000"}'))->>'msg' like '계좌번호는%', '계좌번호 형식 확인');
+select test.ok((public.admin_set_pay('{"bank":"","holder":"x","number":"123-456789","fee":""}'))->>'msg' like '은행명%', '은행명 필수');
+select test.ok((public.admin_set_pay('{"bank":"농협","holder":"현실용음악학원","number":"123-4567-8901-23","fee":"5,000원"}'))->>'fee' = '5000', '저장(이용료의 쉼표·원 정리)');
+set role anon;
+select test.ok((public.pay_info())->>'number' = '123-4567-8901-23' and (public.pay_info())->>'holder' = '현실용음악학원', '저장한 계좌가 공개 화면에 바로 보임');
+reset role;
+
 select '모든 시험 통과' as 결과;
