@@ -290,7 +290,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.11";
+const APP_VERSION="v0.21.12";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1116,7 +1116,7 @@ function userEditHtml(){
     prod=(q?'<p class="hint" style="margin:0 0 8px">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'')+newProdFields("ue",u.type);
   }
   // 상자 나눔(v0.21.10): ① 이용자 정보(메모까지) ② 정액권·횟수권(종료 버튼 포함) ③ [블랙리스트 사유] ④ 저장 | 수정 취소 ⑤ 블랙리스트 등록
-  return '<div class="cardgroup"><div class="card">'+typeChecks("ue",u.type)+
+  return '<div class="cardgroup"><div class="card"><div class="part" style="margin-top:0">이용자 정보</div>'+typeChecks("ue",u.type)+
     (u.status==="blacklisted"?'<p class="hint" style="margin-top:8px">블랙리스트 이용자입니다. 복귀하기 전에는 재원생으로 바꿀 수 없습니다.</p>':'')+
     userFields("ue",u)+'</div>'+
     '<div class="card"><div class="part" style="margin-top:0">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음 · 새로 추가할 수 있습니다')+'</small></div>'+prod+
