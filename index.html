@@ -286,7 +286,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.3";
+const APP_VERSION="v0.21.4";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -958,7 +958,7 @@ function statusGroups(){
 function statusItem(u,kind,extra,btn){
   const col=u.type==="ext"?'--ext-text':'--stu-text',q=kind==="none"?u.last:u.current;
   const line=kind==="none"?(q?'<div class="hint">만료된 '+PROD[q.kind]+': '+q.end+' 종료</div>':''):'<div class="hint">'+prodLine(q)+'</div>';
-  return '<div class="item uitem" data-sv="'+u.id+'" data-n="'+esc(normName(u.name))+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+(kind!=="none"?'<span class="badge '+q.kind+'">'+PROD[q.kind]+'</span>':'')+(u.status!=="blacklisted"&&u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+
+  return '<div class="item uitem" data-sv="'+u.id+'" data-n="'+esc(normName(u.name))+'" role="button" tabindex="0" aria-label="'+esc(u.name)+' 정보 보기"><div class="row" style="align-items:center"><div style="flex:1;min-width:0"><b style="color:var('+col+')">'+esc(u.name)+'</b><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent">'+tgtLabel(u.type)+'</span>'+(kind!=="none"?'<span class="badge '+q.kind+'">'+PROD[q.kind]+'</span>':'')+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+
     '<div class="hint">'+esc(u.phone||"전화번호 없음")+(u.part?' · '+esc(u.part):'')+'</div>'+(u.memo?'<div class="hint">'+esc(u.memo)+'</div>':'')+line+(extra||'')+'</div>'+
     '<div style="display:flex;gap:6px;flex:none;align-items:center">'+(btn||'')+'<button class="btn small" style="background:#1e8e4e;color:#fff" data-sc="'+u.id+'"'+(u.phone?'':' disabled')+'>통화</button><span class="chev" aria-hidden="true">›</span></div></div></div>';
 }
@@ -1089,7 +1089,7 @@ function userViewHtml(){
   }
   return '<div class="card"><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span>'+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+'</div>'+
     (u.status==="blacklisted"?'<label>블랙리스트 사유 <small class="hint">등록 '+esc(dOnly(u.black_at||u.status_at))+'</small></label><div class="ro">'+(u.black_reason?esc(u.black_reason):'<span class="hint" style="margin:0">없음</span>')+'</div>':
-     u.black_count>0?'<p class="hint" style="margin-top:8px">'+blackHist(u)+'</p>':'')+
+     '')+
     '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
@@ -1147,9 +1147,9 @@ function bindUserEdit(){
       '<p style="font-size:17px;margin:14px 0 6px"><b>'+esc(u.name)+'</b>님을 블랙리스트에 등록하시겠습니까?</p>'+
       '<p class="hint" style="margin:0">등록하면 예약할 수 없습니다(관리자 슈퍼패스만 가능).'+(n?' 앞으로의 예약 <b>'+n+'건</b>이 관리자 취소됩니다.':'')+' 정액권·횟수권은 그대로 남습니다.</p>'+
       '<label for="bkReason" style="margin-top:14px">사유 <small class="hint">선택 · 200자까지</small></label><textarea id="bkReason" maxlength="200" rows="3" placeholder="예: 노쇼 반복, 장비 파손"></textarea>'+
-      '<div id="bkMsg"></div><button class="btn violet" id="bkGo">블랙리스트 등록</button><button class="btn ghost" id="bkNo">취소</button>';
+      '<div id="bkMsg"></div><button class="btn violet" id="bkGo">블랙리스트 등록</button>';
     $("#bg").classList.add("open");$("#bkReason").focus();
-    $("#bkNo").onclick=closeSheet;$("#bkNo2").onclick=closeSheet;
+    $("#bkNo2").onclick=closeSheet;
     $("#bkGo").onclick=async()=>{
       $("#bkGo").disabled=true;
       const rs=$("#bkReason").value.trim(),args={p_id:u.id,p_status:"blacklisted"};if(rs)args.p_reason=rs; // 사유는 있을 때만 보냄
