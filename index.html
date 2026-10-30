@@ -309,7 +309,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.30.0";
+const APP_VERSION="v0.30.1";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1396,7 +1396,7 @@ function feeHtml(){
   const CNT='30일 안에 <b>총 정해진 횟수</b>만큼 예약할 수 있습니다(하루 제한 없음).';
   const upd=priceDate(A.prices.updated_at);
   return (A.prices.ok?'':'<div class="msg err">이용료 표를 불러오지 못했습니다. Supabase에 022를 실행했는지 확인하십시오.</div>')+
-    '<p style="font-size:13px;color:var(--sub);margin:2px 4px 10px">'+(upd?'🗓 마지막 수정: <b style="color:var(--ink)">'+upd+'</b> · 손님 화면에 "'+upd+' 기준 최신 이용료"로 보입니다.':'🗓 아직 저장한 적이 없습니다. 저장하면 수정 날짜가 기록됩니다.')+'</p>'+
+    (upd?'<p style="font-size:13px;color:var(--sub);margin:2px 4px 10px">🗓 <b style="color:var(--ink)">'+upd+'</b> 기준 최신 이용료입니다.</p>':'')+ // 손님 창과 같은 문구(v0.30.1)
     // 손님용 이용료 안내 창과 같은 모양: 큰 상자 "일반회원"(1회 이용료·정액권·횟수권) / "재원생"(정액권)(v0.28.2)
     group("일반회원","--ext-text",
       '<div class="card"><div class="part" style="margin-top:0">1회 이용료<span class="hr1">1시간</span></div>'+
