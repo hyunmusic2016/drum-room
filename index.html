@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.23.2";
+const APP_VERSION="v0.23.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -526,7 +526,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
     const kids=[...$("#sheet").children];kids.forEach(k=>k.classList.add("hidden"));
     const P=prodWarnKind,pop=document.createElement("div");pop.id="payPop";
     pop.innerHTML=mode==="general"?
-     '<div class="row" style="align-items:flex-start"><h2 style="margin:0">예약 이용료 입금 안내</h2><button class="btn ghost small" id="ppBack">← 뒤로</button></div>'+
+     '<div class="row" style="align-items:flex-start"><h2 style="margin:0">예약 이용료 · 입금 안내</h2><button class="btn ghost small" id="ppBack">← 뒤로</button></div>'+
       '<div class="card" style="margin:12px 0 0"><p style="margin:0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p>'+
         '<div id="ppPay"><div class="ro" style="margin-top:8px">불러오는 중입니다…</div></div>'+
         '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 예약하기</button></div>'+
