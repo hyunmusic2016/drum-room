@@ -530,4 +530,31 @@ set role anon;
 select test.ok((public.price_info())->>'updated_at' = '2027-01-10', '공개 조회에 수정 날짜가 보임');
 reset role; reset app.fake_now;
 
+-- ===== 28. 이용자 삭제 (024) =====
+reset role; set app.fake_now = '2027-02-10 12:00:00'; set role authenticated;
+select test.ok((public.admin_create_user('{"type":"ext","name":"삭제시험","pw":"4242","phone":"01042424242","memo":"메모",
+  "prod":{"kind":"count","start":"2027-02-01","days":30,"total":5}}'))->>'ok' = 'true', '삭제 시험: 횟수권 일반회원 등록');
+reset role;
+select id as del_uid from public.users where name = '삭제시험' \gset
+select id as del_pid from public.products where user_id = :del_uid \gset
+-- 지난 예약 1건(어제), 앞으로의 예약 2건(오늘 15시, 내일 10시)
+insert into public.reservations (date, hour, name, pw_hash, user_id, is_ext, product_id, product_kind)
+  select '2027-02-09', 9, '삭제시험', pw_hash, id, true, :del_pid, 'count' from public.users where id = :del_uid;
+set role anon;
+select test.ok((public.reserve('2027-02-10', 15, '삭제시험', '4242', true, 'ext'))->>'ok' = 'true', '삭제 시험: 오늘 예약');
+select test.ok((public.reserve('2027-02-11', 10, '삭제시험', '4242', true, 'ext'))->>'ok' = 'true', '삭제 시험: 내일 예약');
+select test.denied($$select public.admin_delete_user(1)$$, '익명은 이용자를 삭제할 수 없음');
+reset role; set role authenticated;
+select test.ok((public.admin_delete_user(:del_uid))->>'cancelled' = '2', '삭제: 앞으로의 예약 2건 자동 취소');
+select test.ok((public.admin_delete_user(:del_uid))->>'msg' like '없는 이용자%', '이미 삭제한 이용자는 다시 못 지움');
+reset role;
+select test.ok(not exists (select 1 from public.users where id = :del_uid), '이용자 정보(이름·전화번호·메모) 삭제됨');
+select test.ok(not exists (select 1 from public.products where id = :del_pid), '정액권·횟수권 함께 삭제됨');
+select test.ok((select count(*) from public.reservations where name = '삭제시험' and status = 'cancelled' and cancel_reason = '관리자 취소: 이용자 삭제' and user_id is null) = 2, '취소된 예약은 사유가 남고 이용자 연결만 끊김');
+select test.ok((select count(*) from public.reservations where name = '삭제시험' and date = '2027-02-09' and status = 'confirmed' and user_id is null and product_id is null) = 1, '지난 예약은 기록으로 남음(연결만 끊김)');
+set role anon;
+select test.ok((public.my_reservations('삭제시험', '4242'))->'list'->0->>'reason' is not null and (public.my_reservations('삭제시험', '4242'))->>'user_type' is null, '내 예약에서 취소 사유 확인 가능, 등록 이용자 아님');
+select test.ok((public.reserve('2027-02-11', 11, '삭제시험', '4242', true, 'ext'))->>'msg' like '등록된 일반회원 정보와 일치하지 않습니다%', '삭제된 일반회원은 더 예약할 수 없음(미등록)');
+reset role; reset app.fake_now;
+
 select '모든 시험 통과' as 결과;

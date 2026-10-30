@@ -314,7 +314,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.32.0";
+const APP_VERSION="v0.33.0";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1190,7 +1190,7 @@ const daysAgo=d=>{const [y,m,dd]=d.split("-").map(Number),[ty,tm,td]=seoulDate()
 function dormantUsers(){return A.users.filter(u=>u.status==="active"&&u.dormant).sort((a,b)=>(b.last_used||"").localeCompare(a.last_used||"")||b.id-a.id)}
 function dormantHtml(){
   const us=dormantUsers();
-  return '<p class="hint" style="margin:0 0 8px">마지막 이용일로부터 '+DORMANT_DAYS+'일 이상 지났고 사용 중인 정액권·횟수권이 없는 이용자입니다. 다시 예약하면 이용자 현황으로 자동으로 돌아갑니다.</p>'+
+  return (uFlash?'<div class="msg ok">'+esc(uFlash)+'</div>':'')+'<p class="hint" style="margin:0 0 8px">마지막 이용일로부터 '+DORMANT_DAYS+'일 이상 지났고 사용 중인 정액권·횟수권이 없는 이용자입니다. 다시 예약하면 이용자 현황으로 자동으로 돌아갑니다.</p>'+
     '<div class="hrow"><input type="search" class="hsearch" id="qDorm" placeholder="이름으로 찾기" autocomplete="off" aria-label="이름으로 찾기" value="'+esc(dmQ)+'"></div>'+
     '<p class="hint hidden" id="qDormNone">찾는 이름의 이용자가 없습니다.</p>'+
     '<div class="card" id="dormList"><div class="part" style="margin-top:0">휴면 이용자<small class="cnt">'+us.length+'명</small></div>'+
@@ -1318,7 +1318,8 @@ function userEditHtml(){
     (u.status==="blacklisted"?'<div class="card"><div class="part" style="margin-top:0">블랙리스트 사유<small>등록 '+esc(dOnly(u.black_at||u.status_at))+'</small></div><textarea id="eBReason" maxlength="200" rows="3" aria-label="블랙리스트 사유" placeholder="사유 없음 (200자까지)">'+esc(u.black_reason||"")+'</textarea></div>':'')+
     '<div class="card"><div id="ueMsg"></div><div class="btn2"><button class="btn" id="ueSave">저장</button><button class="btn ghost" id="ueBack">수정 취소</button></div></div></div>'+
     // 블랙리스트 등록은 따로 된 상자(v0.21.1)
-    (u.type==="ext"&&u.status!=="blacklisted"?'<div class="card blackbox"><div class="part" style="margin-top:0">블랙리스트</div>'+(u.black_count>0?'<p class="hint" style="margin:0 0 8px">'+blackHist(u)+'</p>':'')+'<button class="btn violet" id="eBlack">블랙리스트 등록</button><p class="hint">등록하면 이 이용자는 예약할 수 없고(관리자 슈퍼패스만 가능), 앞으로의 확정 예약은 관리자 취소됩니다. 정액권·횟수권은 그대로 남습니다. 설정 &gt; 블랙리스트에서 복귀할 수 있습니다.</p></div>':'');
+    (u.type==="ext"&&u.status!=="blacklisted"?'<div class="card blackbox"><div class="part" style="margin-top:0">블랙리스트</div>'+(u.black_count>0?'<p class="hint" style="margin:0 0 8px">'+blackHist(u)+'</p>':'')+'<button class="btn violet" id="eBlack">블랙리스트 등록</button><p class="hint">등록하면 이 이용자는 예약할 수 없고(관리자 슈퍼패스만 가능), 앞으로의 확정 예약은 관리자 취소됩니다. 정액권·횟수권은 그대로 남습니다. 설정 &gt; 블랙리스트에서 복귀할 수 있습니다.</p></div>':'')+
+    '<div style="margin:32px 0 0"><button class="btn danger small" id="eDel">이용자 삭제</button></div>'; // 맨 아래 왼쪽 작은 빨간 버튼(v0.33.0, 서버 024)
 }
 function bindUserEdit(){
   const u=A.detail.user,c=u.current;
@@ -1338,6 +1339,18 @@ function bindUserEdit(){
       reloadAdmin(); // 수정 화면에 남아 새 상품을 추가할 수 있음
     };
   }
+  if($("#eDel"))$("#eDel").onclick=async()=>{
+    // 이용자 삭제(v0.33.0): 되돌릴 수 없음. 앞으로의 확정 예약은 서버가 자동으로 관리자 취소(사용자 결정).
+    const rs=(A.detail&&A.detail.reservations)||[],n=rs.filter(r=>r.status==="confirmed"&&!r.ended).length;
+    if(!confirm(u.name+"님을 삭제하시겠습니까?\n\n· 이름·비밀번호·전화번호·파트·메모와 정액권·횟수권이 모두 지워지며 되돌릴 수 없습니다."+(n?"\n· 앞으로의 예약 "+n+"건이 관리자 취소됩니다.":"")+"\n· 지난 예약 기록은 30일 보관 뒤 자동으로 지워집니다."))return;
+    $("#eDel").disabled=true;
+    const r=await rpc("admin_delete_user",{p_id:u.id});
+    if(r.auth){adminExpired();return}
+    if(!r.ok){$("#eDel").disabled=false;alert(r.msg);if(r.refresh){editUser=null;viewUser=null;A.detail=null;await reloadAdmin();renderAdmin()}return}
+    editUser=null;viewUser=null;A.detail=null;
+    uFlash=u.name+"님을 삭제했습니다."+(r.cancelled?" 앞으로의 예약 "+r.cancelled+"건을 취소했습니다.":"");
+    await reloadAdmin();renderAdmin();window.scrollTo(0,0);
+  };
   if($("#eBlack"))$("#eBlack").onclick=()=>{
     // 확인 팝업에서 사유(선택)를 적고 등록합니다(v0.21.3).
     const n=(A.res||[]).filter(r=>r.user_id===u.id&&r.status==="confirmed"&&!r.ended).length;
