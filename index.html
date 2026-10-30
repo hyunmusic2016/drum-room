@@ -293,7 +293,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.25.2";
+const APP_VERSION="v0.25.3";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -824,7 +824,8 @@ $("#mFind").onclick=async()=>{
       '<div style="margin-top:8px;font-weight:700;color:var('+col+')">'+(P.kind==="count"?"남은 횟수: "+prodLeftText(P):'오늘 이용 '+prodLeftText(P,dts[0])+'<br>내일 이용 '+prodLeftText(P,dts[1]))+'</div>'+
       '<div class="hint">이용 기간: '+P.start+" ~ "+P.end+' · '+leftText(P)+'</div></div>';
   }
-  const now=r.list.filter(x=>!x.ended); // 지난 예약은 아래 '예약 기록'에서 봅니다.
+  // 예약 현황에는 아직 끝나지 않은 확정 예약만. 취소된 예약·시간이 지난 예약은 오늘 것이라도 바로 아래 '예약 기록'으로(v0.25.3)
+  const now=r.list.filter(x=>x.status==="confirmed"&&!x.ended),past=r.list.filter(x=>!now.includes(x));
   if(!now.length)h+='<div class="msg ok">예정된 예약이 없습니다.</div>';
   h+=now.map(x=>'<div class="item"><div class="row" style="flex-wrap:wrap"><div><b>'+dateLabel(x.date)+' '+hourLabel(x.hour)+'</b>'+(x.prod?'<span class="badge '+x.prod+'">'+PROD[x.prod]+'</span>':"")+'<div class="hint '+(x.status==="cancelled"?"status-cancel":"")+'">'+stLabel(x.status)+(x.reason?" · "+esc(x.reason):"")+'</div></div>'+(x.status==="confirmed"&&!x.started?'<div style="display:flex;gap:6px"><button class="btn ghost small" data-m="'+x.id+'">예약 변경</button><button class="btn danger small" data-c="'+x.id+'">취소</button></div>':"")+'</div></div>').join("");
   const hasUp=now.some(x=>x.status==="confirmed");
@@ -839,7 +840,7 @@ $("#mFind").onclick=async()=>{
   $("#mBackSlot").innerHTML='<button class="btn ghost small" id="mBack">← 다시 조회</button>'; // 제목 "내 예약 확인"과 같은 줄 오른쪽
   // 위 칸: 이름·구분·상품 / 아래 칸: "예약 현황" 제목 + 예약 목록 + 출입 비밀번호(v0.19.5)
   $("#mOut").innerHTML='<div class="card">'+head+ph+'</div>'+
-    '<div class="card"><div class="part" style="margin-top:0">예약 현황</div>'+h+(hasPay?payCardHtml("mPay"):'')+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(r.list,r.old_products||[]);
+    '<div class="card"><div class="part" style="margin-top:0">예약 현황</div>'+h+(hasPay?payCardHtml("mPay"):'')+(hasUp?'<div id="mCodes"></div>':'')+'</div>'+histHtml(past,r.old_products||[]);
   $("#mBack").onclick=()=>{mineReset();$("#mName").focus()};
   if(hasPay)loadPayBox("#mPay",()=>my===mineSeq);
   if(hasUp)showCodes("#mCodes",name,pw,()=>my===mineSeq);
