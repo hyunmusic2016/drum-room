@@ -291,7 +291,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.18";
+const APP_VERSION="v0.21.19";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -300,6 +300,7 @@ const DAYS_KO=["일","월","화","수","목","금","토"];
 const PHONE="010-7753-8730";
 // 상품 기간이 끝난 날짜를 일반 예약할 때 안내하는 입금 계좌·이용료(v0.21.16). ※ 정식 오픈 전 실제 값으로 바꿀 것(CLAUDE.md 남은 일)
 const PAY_ACCOUNT="계좌번호 입력 예정",PAY_FEE="0000";
+const EXPIRED_INFO_DAYS=7; // 정액권·횟수권이 끝난 뒤 며칠 동안 위 안내를 보여 줄지(서버 017도 7일)
 const CONTACT_HOURS="매일 오전 9시 ~ 밤 10시"; // 문의 가능 시간(학원 운영에 맞게 수정)
 const PROD={flat:"정액권",count:"횟수권"};
 const PERIOD_DAYS=30;  // 정액권·횟수권 기본 기간(일)
@@ -481,7 +482,7 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       if(my!==bseq||!r||!r.product||!$("#rBadge"))return;
       const p=r.product;
       const sh=ds=>{const [y,m,d]=ds.split("-").map(Number);return m+"/"+d+"("+DAYS_KO[new Date(Date.UTC(y,m-1,d)).getUTCDay()]+")"};
-      if(D>p.end){ // 상품이 이 날짜 전에 끝남 → 상품이 아닌 일반 예약으로 잡힌다고 미리 알림(v0.21.15)
+      if(D>p.end&&D<=addDays(p.end,EXPIRED_INFO_DAYS)){ // 상품이 이 날짜 전에 끝남(끝난 뒤 7일까지) → 일반 예약으로 잡힌다고 미리 알림(v0.21.15, 7일은 v0.21.19·서버 017)
         const day=D===allowedDates()[0]?"오늘":"내일",P=PROD[p.kind];
         prodWarnKind=P;
         prodWarn=P+" 기간("+sh(p.end)+"까지)이 지나 "+day+" 예약은 "+P+"이 아닌 일반 예약"+(p.kind==="flat"&&!EXT?"(하루 1회)":"")+"으로 잡힙니다.";
@@ -506,7 +507,8 @@ function openSheet(h,mode){const D=curDate;const EXT=mode==="ext";
       '<div class="card" style="margin:10px 0 0"><b>일반 예약으로 이용하시려면</b><p style="margin:6px 0 0">아래 계좌로 이용료를 입금하신 뒤 이용하십시오.</p>'+
         '<div class="ro" style="margin-top:8px;display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0">'+esc(PAY_ACCOUNT)+'<br><b>이용료 '+esc(PAY_FEE)+'원</b></div>'+
         '<button type="button" class="btn ghost small" id="ppCopy" style="flex:none;margin:0">계좌번호 복사</button></div>'+
-        '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 일반 예약하기</button></div>';
+        '<button class="btn" id="ppGo">입금 후 이용하겠습니다 · 일반 예약하기</button></div>'+
+      '<p class="hint" style="margin-top:10px;text-align:center">이 안내는 '+esc(P)+' 사용이 끝난 날부터 '+EXPIRED_INFO_DAYS+'일 동안 보입니다.</p>';
     $("#sheet").prepend(pop);$("#sheet").scrollTop=0;
     const close=()=>{pop.remove();kids.forEach(k=>k.classList.remove("hidden"))};
     $("#ppBack").onclick=close;

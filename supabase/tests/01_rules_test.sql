@@ -440,4 +440,28 @@ set role anon;
 select test.ok((public.reserve('2026-12-23', 14, '휴면외부', '5656', true, 'ext'))->>'ok' = 'true', '복귀 뒤 일반 외부 이용자 예약 가능');
 reset role;
 
+-- ===== 21. 끝난 지 7일 안의 상품도 예약 창에 알려 줌 (017) =====
+-- 지금 12/22. 만료정액(재원생)의 정액권들: 12/20 하루짜리(2일 전 종료) 외에 15번·16번에서 만든 것들이 있음
+reset role;
+insert into public.users (type, name, pw_hash, phone) values ('ext', '칠일시험', public.hash_pw('4545'), '010-4545-4545');
+select id as s_uid from public.users where name = '칠일시험' \gset
+insert into public.products (user_id, kind, start_date, end_date, total_count) values (:s_uid, 'count', '2026-11-16', '2026-12-15', 5);  -- 7일 전 종료
+set role anon;
+select test.ok((public.product_info('ext', '칠일시험', '4545'))->'product'->>'end' = '2026-12-15', '끝난 지 7일째(12/15 종료, 오늘 12/22) 상품은 알려 줌');
+reset role;
+update public.products set end_date = '2026-12-14' where user_id = :s_uid;  -- 8일 전 종료
+set role anon;
+select test.ok((public.product_info('ext', '칠일시험', '4545'))->'product' = 'null'::jsonb, '끝난 지 8일 지난 상품은 알려 주지 않음');
+reset role;
+update public.products set end_date = '2026-12-21' where user_id = :s_uid;  -- 어제 종료
+set role anon;
+select test.ok((public.product_info('ext', '칠일시험', '4545'))->'product'->>'kind' = 'count', '어제 끝난 상품도 알려 줌');
+select test.ok((public.product_info('ext', '칠일시험', '9999'))->'product' = 'null'::jsonb, '비밀번호가 틀리면 알려 주지 않음');
+reset role;
+insert into public.products (user_id, kind, start_date, end_date, total_count) values (:s_uid, 'count', '2026-12-22', '2026-12-30', 3);
+set role anon;
+select test.ok((public.product_info('ext', '칠일시험', '4545'))->'product'->>'end' = '2026-12-30', '사용 중 상품이 있으면 그것을 알려 줌');
+select test.ok((public.reserve('2026-12-23', 15, '칠일시험', '4545', true, 'ext'))->>'prod' = 'count', '사용 중 상품으로 예약됨');
+reset role;
+
 select '모든 시험 통과' as 결과;
