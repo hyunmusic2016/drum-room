@@ -101,7 +101,7 @@ textarea{resize:vertical;line-height:1.5;margin-bottom:8px} /* 지금은 아니�
 :root[data-theme="dark"] .badge.black{color:#c9a8f0;border-color:#c9a8f0}
 .btn.edit{background:#f5c518;color:#3d2e00}
 .cardgroup{border:1.5px solid var(--line);border-radius:16px;padding:4px 10px;background:var(--line-soft,rgba(120,110,90,.07));margin:10px 0} /* 이용자 수정: 정보·상품·저장 상자를 큰 상자로 묶음(v0.21.11) */
-.card.blackbox{margin-top:40px} /* 블랙리스트는 묶음 상자와 간격을 두어 떨어뜨림 */
+.card.blackbox,.card.farbox{margin-top:40px} /* 블랙리스트는 묶음 상자와 간격을 두어 떨어뜨림 */
 .btn2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn2 .btn{margin:0} /* 모든 [수정] 버튼은 개나리색으로 통일합니다. */
 .btn.small{min-height:40px;width:auto;padding:0 14px;margin:0;white-space:nowrap;flex:none}
@@ -290,7 +290,7 @@ select:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
 <script>
 "use strict";
 /* 화면 버전: 프런트엔드를 고칠 때마다 올립니다(작은 수정은 마지막 숫자, 기능 추가는 가운데 숫자). */
-const APP_VERSION="v0.21.13";
+const APP_VERSION="v0.21.14";
 /* Supabase 연결 정보: 공개용 주소와 공개용 키(Publishable)만 넣습니다. secret·service_role 키는 절대 넣지 않습니다.
    규칙(중복, 하루 횟수, 상품 횟수, 비밀번호 확인)은 모두 서버 함수가 최종 결정합니다. */
 const SUPABASE_URL="https://ibcvbnpqmlqmdwxkepbl.supabase.co";
@@ -1091,15 +1091,16 @@ function userViewHtml(){
   }else{
     prod='<p class="hint" style="margin:0">사용 중인 정액권·횟수권이 없습니다.</p>'+(q?'<p class="hint">만료된 '+PROD[q.kind]+': '+q.start+' ~ '+q.end+'</p>':'');
   }
-  return '<div class="card"><div class="part" style="margin-top:0">이용자 정보</div><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span>'+(c?'<span class="badge '+c.kind+'">'+PROD[c.kind]+'</span>':'')+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+'</div>'+
+  // 상자 나눔(v0.21.14): 큰 상자 안에 ① 이용자 정보 ② 정액권·횟수권 ③ [수정], 그 아래 간격을 두고 예약 기록 상자(이용자 수정과 같은 느낌)
+  return '<div class="cardgroup"><div class="card"><div class="part" style="margin-top:0">이용자 정보</div><div><span class="badge" style="color:var('+col+');border-color:currentColor;background:transparent;margin-left:0">'+tgtLabel(u.type)+'</span>'+(c?'<span class="badge '+c.kind+'">'+PROD[c.kind]+'</span>':'')+(u.status==="blacklisted"?'<span class="badge black">블랙리스트</span>':u.black_count>0?'<span class="badge black hist">블랙리스트 이력</span>':'')+'</div>'+
     (u.status==="blacklisted"?'<label>블랙리스트 사유 <small class="hint">등록 '+esc(dOnly(u.black_at||u.status_at))+'</small></label><div class="ro">'+(u.black_reason?esc(u.black_reason):'<span class="hint" style="margin:0">없음</span>')+'</div>':
      '')+
     '<div class="cols c2">'+ro("이름 (본명)",u.name)+'<div><label>비밀번호 4자리</label><div class="ro">●●●●</div></div></div>'+
     '<div class="cols c2">'+ro("전화번호",u.phone)+ro("파트",u.part)+'</div>'+
     '<label>메모</label><div class="ro">'+(u.memo?esc(u.memo):'<span class="hint" style="margin:0">없음</span>')+'</div>'+
-    '<div class="part" style="margin-top:22px">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
-    '<button class="btn edit" id="vEdit" style="margin-top:18px">수정</button>'+
-    '</div><div class="card">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div>'; // 예약 기록·만료된 상품은 따로 된 상자(v0.21.7)
+    '</div><div class="card"><div class="part" style="margin-top:0">정액권·횟수권<small>'+(c?PROD[c.kind]+' 사용 중':'없음')+'</small></div>'+prod+
+    '</div><div class="card"><button class="btn edit" id="vEdit" style="margin:0">수정</button></div></div>'+
+    '<div class="card farbox">'+histHtml(D.reservations,D.products.filter(x=>x.end<t))+'</div>'; // 예약 기록·만료된 상품은 따로 된 상자(v0.21.7)
 }
 function bindUserView(){
   $("#vEdit").onclick=()=>{editUser=viewUser;renderAdmin()};
